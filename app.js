@@ -26,7 +26,6 @@
     displayTasksButton: document.getElementById("displayTasksButton"),
     displayTasksButtonLabel: document.getElementById("displayTasksButtonLabel"),
     createTaskButton: document.getElementById("createTaskButton"),
-    organizationsButton: document.getElementById("organizationsButton"),
     notebookButton: document.getElementById("notebookButton"),
     calendarHint: document.getElementById("calendarHint"),
     appMain: document.getElementById("appMain"),
@@ -71,10 +70,6 @@
     notebookDialog: document.getElementById("notebookDialog"),
     notebookList: document.getElementById("notebookList"),
     closeNotebookButton: document.getElementById("closeNotebookButton"),
-    organizationDialog: document.getElementById("organizationDialog"),
-    organizationManagerList: document.getElementById("organizationManagerList"),
-    organizationManagerError: document.getElementById("organizationManagerError"),
-    closeOrganizationDialogButton: document.getElementById("closeOrganizationDialogButton"),
     transferDialog: document.getElementById("transferDialog"),
     transferTaskLabel: document.getElementById("transferTaskLabel"),
     transferDateInput: document.getElementById("transferDateInput"),
@@ -102,8 +97,6 @@
   let daySidebarVisible = false;
   let dayDialogOrigin = null;
   let notebookDialogOrigin = null;
-  let organizationDialogOrigin = null;
-  let editingOrganizationId = null;
   let taskFormContext = null;
   let taskFormOrigin = null;
   let taskFormInitialSnapshot = null;
@@ -694,13 +687,40 @@
     return "Без организации";
   }
 
-  function appendOrganizationChips(container, organizations, className) {
+  function appendOrganizationChips(container, organizations, className, options = {}) {
     if (organizations.length === 0) {
       return;
     }
     const chips = createElement("div", className);
     organizations.forEach((organization) => {
-      chips.append(createElement("span", "organization-chip", organization.name));
+      if (options.taskId && options.mode) {
+        const chip = createElement(
+          "button",
+          "organization-chip organization-chip--editable",
+          organization.name,
+        );
+        chip.type = "button";
+        chip.dataset.tooltip = "Двойной щелчок — изменить";
+        chip.setAttribute(
+          "aria-label",
+          `${organization.name}. Двойной щелчок или Enter — изменить организацию задачи`,
+        );
+        const openEditor = () => openTaskForm({
+          mode: options.mode,
+          taskId: options.taskId,
+          origin: chip,
+        });
+        chip.addEventListener("dblclick", openEditor);
+        chip.addEventListener("keydown", (event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            openEditor();
+          }
+        });
+        chips.append(chip);
+      } else {
+        chips.append(createElement("span", "organization-chip", organization.name));
+      }
     });
     container.append(chips);
   }
@@ -776,7 +796,10 @@
       if (task.id === expandedTaskId) {
         const details = createElement("div", "day-task-card__details");
         details.append(createElement("p", "day-task-card__date", `Дата: ${formatShortDate(task.date)}`));
-        appendOrganizationChips(details, taskOrganizations(task), "day-task-card__organizations");
+        appendOrganizationChips(details, taskOrganizations(task), "day-task-card__organizations", {
+          taskId: task.id,
+          mode: "edit-calendar",
+        });
         details.append(createElement("p", "day-task-card__description", task.description ?? ""));
 
         const actions = createElement("div", "day-task-card__actions");
@@ -992,7 +1015,10 @@
       const card = createElement("article", "notebook-card");
       card.dataset.taskId = task.id;
       card.append(createElement("h3", "notebook-card__title", `${taskHeading(task)}${task.edited ? " ★" : ""}`));
-      appendOrganizationChips(card, taskOrganizations(task), "notebook-card__organizations");
+      appendOrganizationChips(card, taskOrganizations(task), "notebook-card__organizations", {
+        taskId: task.id,
+        mode: "edit-notebook",
+      });
       card.append(createElement("p", "notebook-card__description", task.description ?? ""));
 
       const actions = createElement("div", "notebook-card__actions");
@@ -1012,112 +1038,6 @@
     elements.notebookList.append(fragment);
   }
 
-  function setOrganizationManagerError(message = "") {
-    setText(elements.organizationManagerError, message);
-    elements.organizationManagerError.hidden = !message;
-  }
-
-  function submitOrganizationRename(organizationId, input) {
-    const name = input.value;
-    editingOrganizationId = null;
-    setOrganizationManagerError();
-    try {
-      const result = renameOrganization(organizationId, name);
-      if (result) {
-        showToast("Название организации изменено");
-      } else {
-        editingOrganizationId = organizationId;
-      }
-    } catch (error) {
-      editingOrganizationId = organizationId;
-      const message = error.name === "TaskValidationError"
-        ? error.message
-        : "Не удалось изменить организацию.";
-      setOrganizationManagerError(message);
-      input.focus();
-    }
-  }
-
-  function renderOrganizationManager() {
-    elements.organizationManagerList.replaceChildren();
-    const organizations = [...(currentState?.organizations ?? [])]
-      .filter((organization) => !organization.archived)
-      .sort((first, second) => first.name.localeCompare(second.name, "ru-RU"));
-
-    if (organizations.length === 0) {
-      elements.organizationManagerList.append(
-        createElement("p", "organization-manager-empty", "Нет организаций для управления"),
-      );
-      return;
-    }
-
-    const fragment = document.createDocumentFragment();
-    organizations.forEach((organization) => {
-      const row = createElement("article", "organization-manager-row");
-      row.dataset.organizationId = organization.id;
-      const taskCount = currentState.tasks.filter(
-        (task) => Array.isArray(task.organizationIds) && task.organizationIds.includes(organization.id),
-      ).length;
-
-      if (organization.id === editingOrganizationId) {
-        const input = createElement("input", "organization-manager-row__input");
-        input.type = "text";
-        input.maxLength = MAX_ORGANIZATION_NAME_LENGTH;
-        input.value = organization.name;
-        input.setAttribute("aria-label", `Новое название организации ${organization.name}`);
-
-        const actions = createElement("div", "organization-manager-row__actions");
-        const saveButton = createTaskIconButton("Сохранить название", "✓");
-        const cancelButton = createTaskIconButton("Отменить изменение", "×");
-        saveButton.addEventListener("click", () => submitOrganizationRename(organization.id, input));
-        cancelButton.addEventListener("click", () => {
-          editingOrganizationId = null;
-          setOrganizationManagerError();
-          renderOrganizationManager();
-        });
-        input.addEventListener("keydown", (event) => {
-          if (event.key === "Enter") {
-            event.preventDefault();
-            submitOrganizationRename(organization.id, input);
-          } else if (event.key === "Escape") {
-            editingOrganizationId = null;
-            setOrganizationManagerError();
-            renderOrganizationManager();
-          }
-        });
-        actions.append(saveButton, cancelButton);
-        row.append(input, actions);
-        window.setTimeout(() => input.focus(), 0);
-      } else {
-        const info = createElement("div", "organization-manager-row__info");
-        info.append(createElement("strong", "organization-manager-row__name", organization.name));
-        info.append(createElement(
-          "span",
-          "organization-manager-row__meta",
-          `Связанных задач: ${taskCount}`,
-        ));
-
-        const actions = createElement("div", "organization-manager-row__actions");
-        const editButton = createTaskIconButton("Переименовать организацию", "✎");
-        const archiveButton = createTaskIconButton(
-          "Удалить организацию из выбора",
-          "×",
-          "task-icon-button--danger",
-        );
-        editButton.addEventListener("click", () => {
-          editingOrganizationId = organization.id;
-          setOrganizationManagerError();
-          renderOrganizationManager();
-        });
-        archiveButton.addEventListener("click", () => confirmArchiveOrganization(organization.id));
-        actions.append(editButton, archiveButton);
-        row.append(info, actions);
-      }
-      fragment.append(row);
-    });
-    elements.organizationManagerList.append(fragment);
-  }
-
   function showReadyState() {
     elements.app.dataset.appState = "ready";
     elements.calendarPanel.hidden = false;
@@ -1133,9 +1053,6 @@
     renderDaySidebar();
     if (elements.notebookDialog.open) {
       renderNotebook();
-    }
-    if (elements.organizationDialog.open) {
-      renderOrganizationManager();
     }
   }
 
@@ -1335,43 +1252,6 @@
     nextState.tasks.splice(taskIndex, 1);
     pruneUnusedOrganizations(nextState);
     return saveState(nextState);
-  }
-
-  function renameOrganization(organizationId, rawName) {
-    const name = prepareOrganizationName(rawName);
-    if (!name || name.length > MAX_ORGANIZATION_NAME_LENGTH) {
-      throw validationError("organization-manager", "Название должно содержать от 1 до 100 символов.");
-    }
-
-    const nextState = cloneState(currentState);
-    const organization = nextState.organizations.find((item) => item.id === organizationId && !item.archived);
-    if (!organization) {
-      throw new Error("OrganizationNotFound");
-    }
-
-    const normalizedName = normalizeOrganizationName(name);
-    const duplicate = nextState.organizations.some(
-      (item) => item.id !== organizationId && item.normalizedName === normalizedName,
-    );
-    if (duplicate) {
-      throw validationError("organization-manager", "Организация с таким названием уже существует.");
-    }
-
-    organization.name = name;
-    organization.normalizedName = normalizedName;
-    organization.updatedAt = nowIso();
-    return saveState(nextState) ? cloneState(organization) : null;
-  }
-
-  function archiveOrganization(organizationId) {
-    const nextState = cloneState(currentState);
-    const organization = nextState.organizations.find((item) => item.id === organizationId && !item.archived);
-    if (!organization) {
-      throw new Error("OrganizationNotFound");
-    }
-    organization.archived = true;
-    organization.updatedAt = nowIso();
-    return saveState(nextState) ? cloneState(organization) : null;
   }
 
   function initialize() {
@@ -1744,20 +1624,6 @@
     closeModal(elements.notebookDialog);
   }
 
-  function openOrganizationDialog(origin = elements.organizationsButton) {
-    organizationDialogOrigin = origin;
-    editingOrganizationId = null;
-    setOrganizationManagerError();
-    renderOrganizationManager();
-    showModal(elements.organizationDialog);
-  }
-
-  function closeOrganizationDialog() {
-    editingOrganizationId = null;
-    setOrganizationManagerError();
-    closeModal(elements.organizationDialog);
-  }
-
   function openTransferDialog(taskId) {
     const task = currentState.tasks.find((item) => item.id === taskId && item.date !== null && !item.completed);
     if (!task) {
@@ -1809,31 +1675,6 @@
   function closeConfirmation() {
     pendingConfirmation = null;
     closeModal(elements.confirmActionDialog);
-  }
-
-  function confirmArchiveOrganization(organizationId) {
-    const organization = currentState.organizations.find(
-      (item) => item.id === organizationId && !item.archived,
-    );
-    if (!organization) {
-      return;
-    }
-    const taskCount = currentState.tasks.filter(
-      (task) => Array.isArray(task.organizationIds) && task.organizationIds.includes(organizationId),
-    ).length;
-    openConfirmation({
-      title: "Удалить организацию из выбора?",
-      text: `Организация «${organization.name}» исчезнет из выбора для новых задач. Связанные задачи (${taskCount}) сохранятся без изменений.`,
-      confirmLabel: "Убрать из выбора",
-      danger: true,
-      onConfirm: () => {
-        editingOrganizationId = null;
-        const result = archiveOrganization(organizationId);
-        if (result) {
-          showToast("Организация удалена из выбора");
-        }
-      },
-    });
   }
 
   function confirmMoveToNotebook(taskId) {
@@ -1906,7 +1747,6 @@
   elements.calendarPanel.addEventListener("wheel", handleCalendarWheel, { passive: false });
   elements.displayTasksButton.addEventListener("click", () => setDaySidebarVisibility(!daySidebarVisible));
   elements.createTaskButton.addEventListener("click", () => openTaskForm({ mode: "create", date: null, origin: elements.createTaskButton }));
-  elements.organizationsButton.addEventListener("click", () => openOrganizationDialog());
   elements.notebookButton.addEventListener("click", () => openNotebook());
   elements.createDayTaskButton.addEventListener("click", () => {
     if (!selectedDateKey || !isDateInPlanningRange(selectedDateKey)) {
@@ -1933,16 +1773,6 @@
   elements.notebookDialog.addEventListener("close", () => {
     const origin = notebookDialogOrigin;
     notebookDialogOrigin = null;
-    if (origin && origin.isConnected && typeof origin.focus === "function") {
-      origin.focus();
-    }
-  });
-  elements.closeOrganizationDialogButton.addEventListener("click", closeOrganizationDialog);
-  elements.organizationDialog.addEventListener("close", () => {
-    const origin = organizationDialogOrigin;
-    organizationDialogOrigin = null;
-    editingOrganizationId = null;
-    setOrganizationManagerError();
     if (origin && origin.isConnected && typeof origin.focus === "function") {
       origin.focus();
     }
@@ -2048,8 +1878,6 @@
       transferTask,
       runAutomaticCarry,
       deleteTask,
-      renameOrganization,
-      archiveOrganization,
     }),
     render: renderCalendar,
   });

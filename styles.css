@@ -186,10 +186,6 @@ select:disabled {
   gap: 8px;
 }
 
-.organizations-button__short {
-  display: none;
-}
-
 .storage-status {
   grid-area: status;
   display: flex;
@@ -536,7 +532,6 @@ select:disabled {
 .dialog,
 .task-form-dialog,
 .notebook-dialog,
-.organization-dialog,
 .confirm-action-dialog,
 .transfer-dialog,
 .unsaved-dialog {
@@ -557,7 +552,6 @@ select:disabled {
 .dialog::backdrop,
 .task-form-dialog::backdrop,
 .notebook-dialog::backdrop,
-.organization-dialog::backdrop,
 .confirm-action-dialog::backdrop,
 .transfer-dialog::backdrop,
 .unsaved-dialog::backdrop {
@@ -811,6 +805,21 @@ select:disabled {
   font-weight: 700;
 }
 
+.organization-chip--editable {
+  position: relative;
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
+  user-select: none;
+}
+
+.organization-chip--editable:hover,
+.organization-chip--editable:focus-visible {
+  background: #d5e7df;
+  outline: 1px solid rgba(18, 107, 89, 0.42);
+  outline-offset: 1px;
+}
+
 .day-task-card__actions {
   grid-column: 1 / -1;
   display: flex;
@@ -856,7 +865,8 @@ select:disabled {
   color: var(--danger);
 }
 
-.task-icon-button::after {
+.task-icon-button::after,
+.organization-chip--editable::after {
   content: attr(data-tooltip);
   position: absolute;
   left: 50%;
@@ -880,7 +890,9 @@ select:disabled {
 }
 
 .task-icon-button:hover::after,
-.task-icon-button:focus-visible::after {
+.task-icon-button:focus-visible::after,
+.organization-chip--editable:hover::after,
+.organization-chip--editable:focus-visible::after {
   opacity: 1;
   transform: translate(-50%, 0);
   visibility: visible;
@@ -1052,11 +1064,6 @@ select:disabled {
   max-height: min(84vh, 760px);
 }
 
-.organization-dialog {
-  width: min(620px, calc(100vw - 36px));
-  max-height: min(82vh, 700px);
-}
-
 .notebook-dialog__content {
   display: grid;
   grid-template-rows: auto minmax(120px, 1fr);
@@ -1067,83 +1074,6 @@ select:disabled {
   min-height: 120px;
   padding: 14px 18px 20px;
   overflow-y: auto;
-}
-
-.organization-dialog__content {
-  display: grid;
-  grid-template-rows: auto auto auto minmax(110px, 1fr);
-  max-height: min(82vh, 700px);
-}
-
-.organization-dialog__help {
-  margin: 0;
-  padding: 12px 20px 6px;
-  color: var(--muted);
-  font-size: 0.78rem;
-  line-height: 1.45;
-}
-
-.organization-dialog__error {
-  margin: 4px 20px 0;
-}
-
-.organization-manager-list {
-  min-height: 110px;
-  padding: 10px 18px 18px;
-  overflow-y: auto;
-}
-
-.organization-manager-empty {
-  display: grid;
-  place-items: center;
-  min-height: 150px;
-  margin: 0;
-  color: var(--muted);
-  text-align: center;
-}
-
-.organization-manager-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: #fff;
-}
-
-.organization-manager-row + .organization-manager-row {
-  margin-top: 7px;
-}
-
-.organization-manager-row__info {
-  display: grid;
-  gap: 3px;
-  min-width: 0;
-}
-
-.organization-manager-row__name {
-  overflow: hidden;
-  font-size: 0.86rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.organization-manager-row__meta {
-  color: var(--muted);
-  font-size: 0.7rem;
-}
-
-.organization-manager-row__input {
-  min-width: 0;
-  height: 38px;
-  padding: 7px 9px;
-}
-
-.organization-manager-row__actions {
-  display: inline-flex;
-  gap: 4px;
 }
 
 .notebook-empty {
@@ -1343,14 +1273,6 @@ select:disabled {
 
   .toolbar__hint {
     display: none;
-  }
-
-  .organizations-button__full {
-    display: none;
-  }
-
-  .organizations-button__short {
-    display: inline;
   }
 
   .calendar-day__organization:nth-child(n + 3) {
