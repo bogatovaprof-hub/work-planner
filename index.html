@@ -44,24 +44,24 @@
     <section class="toolbar" aria-label="Поиск и фильтры">
       <label class="field field--search">
         <span class="visually-hidden">Поиск по описанию</span>
-        <input id="searchInput" type="search" placeholder="Поиск по описанию" disabled
-               title="Поиск будет добавлен на шаге 5">
+        <input id="searchInput" type="search" placeholder="Поиск по описанию" autocomplete="off" disabled>
       </label>
       <label class="field">
         <span class="visually-hidden">Организация</span>
-        <select id="organizationFilter" disabled title="Фильтр будет добавлен на шаге 5">
-          <option>Все организации</option>
+        <select id="organizationFilter" disabled>
+          <option value="">Все организации</option>
         </select>
       </label>
       <label class="field">
         <span class="visually-hidden">Статус</span>
-        <select id="statusFilter" disabled title="Фильтр будет добавлен на шаге 5">
-          <option>Все задачи</option>
+        <select id="statusFilter" disabled>
+          <option value="all">Все задачи</option>
+          <option value="incomplete">☐ Невыполненные</option>
+          <option value="completed">☑ Выполненные</option>
         </select>
       </label>
-      <button class="button button--quiet" id="resetFiltersButton" type="button" disabled
-              title="Сброс фильтров будет добавлен на шаге 5">Сбросить</button>
-      <p class="toolbar__hint" id="calendarHint">Выберите день, чтобы посмотреть его задачи</p>
+      <button class="button button--quiet" id="resetFiltersButton" type="button" disabled>Сбросить</button>
+      <p class="toolbar__hint" id="calendarHint">Выберите день или создайте задачу в блокноте</p>
     </section>
 
     <main class="app-main" id="appMain">

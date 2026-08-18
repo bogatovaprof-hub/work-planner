@@ -28,6 +28,10 @@
     createTaskButton: document.getElementById("createTaskButton"),
     notebookButton: document.getElementById("notebookButton"),
     calendarHint: document.getElementById("calendarHint"),
+    searchInput: document.getElementById("searchInput"),
+    organizationFilter: document.getElementById("organizationFilter"),
+    statusFilter: document.getElementById("statusFilter"),
+    resetFiltersButton: document.getElementById("resetFiltersButton"),
     appMain: document.getElementById("appMain"),
     daySidebar: document.getElementById("daySidebar"),
     daySidebarTitle: document.getElementById("daySidebarTitle"),
@@ -114,6 +118,11 @@
   let pendingConfirmation = null;
   let toastTimer = null;
   let calendarWheelLockedUntil = 0;
+  let filterState = {
+    search: "",
+    organizationId: "",
+    status: "all",
+  };
   let lastKnownTodayKey = toDateKey(initialDate.getFullYear(), initialDate.getMonth(), initialDate.getDate());
 
   function createId() {
@@ -342,10 +351,60 @@
     return new Map(organizations.map((organization) => [organization.id, organization]));
   }
 
+  function normalizedSearchQuery() {
+    return String(filterState.search ?? "").trim().toLocaleLowerCase("ru-RU");
+  }
+
+  function hasActiveFilters(options = {}) {
+    const includeStatus = options.includeStatus !== false;
+    return Boolean(
+      normalizedSearchQuery()
+      || filterState.organizationId
+      || (includeStatus && filterState.status !== "all")
+    );
+  }
+
+  function taskMatchesFilters(task, options = {}) {
+    const includeStatus = options.includeStatus !== false;
+    const query = normalizedSearchQuery();
+    if (query && !String(task.description ?? "").toLocaleLowerCase("ru-RU").includes(query)) {
+      return false;
+    }
+    if (
+      filterState.organizationId
+      && !(Array.isArray(task.organizationIds) && task.organizationIds.includes(filterState.organizationId))
+    ) {
+      return false;
+    }
+    if (includeStatus && filterState.status === "incomplete" && task.completed) {
+      return false;
+    }
+    if (includeStatus && filterState.status === "completed" && !task.completed) {
+      return false;
+    }
+    return true;
+  }
+
   function getTasksForDate(dateKey) {
     return (currentState?.tasks ?? [])
-      .filter((task) => task.date === dateKey)
+      .filter((task) => task.date === dateKey && taskMatchesFilters(task))
       .sort((firstTask, secondTask) => {
+        if (Boolean(firstTask.completed) !== Boolean(secondTask.completed)) {
+          return firstTask.completed ? 1 : -1;
+        }
+        return (firstTask.order ?? 0) - (secondTask.order ?? 0);
+      });
+  }
+
+  function getFilteredTasksForDisplayedMonth() {
+    const monthPrefix = `${displayedMonth.getFullYear()}-${padNumber(displayedMonth.getMonth() + 1)}-`;
+    return (currentState?.tasks ?? [])
+      .filter((task) => task.date?.startsWith(monthPrefix) && taskMatchesFilters(task))
+      .sort((firstTask, secondTask) => {
+        const dateDifference = firstTask.date.localeCompare(secondTask.date);
+        if (dateDifference !== 0) {
+          return dateDifference;
+        }
         if (Boolean(firstTask.completed) !== Boolean(secondTask.completed)) {
           return firstTask.completed ? 1 : -1;
         }
@@ -355,7 +414,7 @@
 
   function getNotebookTasks() {
     return (currentState?.tasks ?? [])
-      .filter((task) => task.date === null)
+      .filter((task) => task.date === null && taskMatchesFilters(task, { includeStatus: false }))
       .sort((firstTask, secondTask) => String(secondTask.updatedAt).localeCompare(String(firstTask.updatedAt)));
   }
 
@@ -651,6 +710,89 @@
     return button;
   }
 
+  function setFilterControlsDisabled(disabled) {
+    elements.searchInput.disabled = disabled;
+    elements.organizationFilter.disabled = disabled;
+    elements.statusFilter.disabled = disabled;
+    elements.resetFiltersButton.disabled = disabled || !hasActiveFilters();
+  }
+
+  function renderFilterControls() {
+    const organizations = [...(currentState?.organizations ?? [])]
+      .sort((first, second) => first.name.localeCompare(second.name, "ru-RU"));
+    if (
+      filterState.organizationId
+      && !organizations.some((organization) => organization.id === filterState.organizationId)
+    ) {
+      filterState.organizationId = "";
+    }
+
+    const allOrganizationsOption = createElement("option", "", "Все организации");
+    allOrganizationsOption.value = "";
+    elements.organizationFilter.replaceChildren(allOrganizationsOption);
+    organizations.forEach((organization) => {
+      const option = createElement("option", "", organization.name);
+      option.value = organization.id;
+      elements.organizationFilter.append(option);
+    });
+
+    elements.searchInput.value = filterState.search;
+    elements.organizationFilter.value = filterState.organizationId;
+    elements.statusFilter.value = filterState.status;
+    setFilterControlsDisabled(false);
+  }
+
+  function updateCalendarHint() {
+    const monthPrefix = `${displayedMonth.getFullYear()}-${padNumber(displayedMonth.getMonth() + 1)}-`;
+    const hasMatchingMonthTasks = (currentState?.tasks ?? []).some(
+      (task) => task.date?.startsWith(monthPrefix) && taskMatchesFilters(task),
+    );
+    if (hasActiveFilters() && !hasMatchingMonthTasks) {
+      setText(elements.calendarHint, "Задачи не найдены");
+      elements.calendarHint.hidden = false;
+      return;
+    }
+    setText(elements.calendarHint, "Выберите день или создайте задачу в блокноте");
+    elements.calendarHint.hidden = (currentState?.tasks.length ?? 0) > 0;
+  }
+
+  function renderFilteredViews() {
+    elements.resetFiltersButton.disabled = !hasActiveFilters();
+    renderCalendar();
+    if (elements.dayDialog.open) {
+      renderDayDialog();
+    }
+    renderDaySidebar();
+    if (elements.notebookDialog.open) {
+      renderNotebook();
+    }
+    updateCalendarHint();
+  }
+
+  function resetFilters() {
+    filterState = {
+      search: "",
+      organizationId: "",
+      status: "all",
+    };
+    renderFilterControls();
+    renderFilteredViews();
+  }
+
+  function renderListEmptyState(container, defaultMessage, filtered) {
+    if (!filtered) {
+      container.append(createElement("p", "day-task-empty", defaultMessage));
+      return;
+    }
+    const emptyState = createElement("div", "filter-empty-state");
+    emptyState.append(createElement("p", "", "Задачи не найдены"));
+    const resetButton = createElement("button", "button button--quiet", "Сбросить");
+    resetButton.type = "button";
+    resetButton.addEventListener("click", resetFilters);
+    emptyState.append(resetButton);
+    container.append(emptyState);
+  }
+
   function showModal(dialog) {
     if (typeof dialog.showModal === "function") {
       dialog.showModal();
@@ -734,16 +876,23 @@
     return [...elements.calendarGrid.children].find((child) => child.dataset?.date === dateKey) ?? null;
   }
 
-  function renderDayTaskList(listElement) {
-    if (!selectedDateKey) {
+  function renderDayTaskList(listElement, options = {}) {
+    const filterOverview = Boolean(options.filterOverview && hasActiveFilters());
+    if (!filterOverview && !selectedDateKey) {
       return;
     }
 
     listElement.replaceChildren();
-    const tasks = getTasksForDate(selectedDateKey);
+    const tasks = filterOverview
+      ? getFilteredTasksForDisplayedMonth()
+      : getTasksForDate(selectedDateKey);
 
     if (tasks.length === 0) {
-      listElement.append(createElement("p", "day-task-empty", "На этот день задач нет"));
+      renderListEmptyState(
+        listElement,
+        filterOverview ? "В этом месяце подходящих задач нет" : "На этот день задач нет",
+        hasActiveFilters(),
+      );
       return;
     }
 
@@ -763,8 +912,14 @@
       const summaryToggle = createElement("button", "day-task-card__summary-toggle");
       summaryToggle.type = "button";
       summaryToggle.setAttribute("aria-expanded", String(task.id === expandedTaskId));
-      summaryToggle.setAttribute("aria-label", `${task.id === expandedTaskId ? "Свернуть" : "Раскрыть"}: ${taskHeading(task)}`);
+      summaryToggle.setAttribute(
+        "aria-label",
+        `${task.id === expandedTaskId ? "Свернуть" : "Раскрыть"}: ${taskHeading(task)}${filterOverview ? `, ${formatShortDate(task.date)}` : ""}`,
+      );
       summaryToggle.append(createElement("span", "day-task-card__summary-title", taskHeading(task)));
+      if (filterOverview) {
+        summaryToggle.append(createElement("span", "day-task-card__summary-date", formatShortDate(task.date)));
+      }
       const excerpt = String(task.description ?? "").replace(/\s+/g, " ").trim();
       summaryToggle.append(createElement("span", "day-task-card__summary-excerpt", excerpt));
 
@@ -810,12 +965,20 @@
         const groupIndex = group.findIndex((item) => item.id === task.id);
         const upButton = createTaskIconButton("Переместить задачу выше", "↑", "task-icon-button--order");
         const downButton = createTaskIconButton("Переместить задачу ниже", "↓", "task-icon-button--order");
-        upButton.disabled = groupIndex <= 0;
-        downButton.disabled = groupIndex < 0 || groupIndex >= group.length - 1;
+        const orderLocked = hasActiveFilters();
+        upButton.disabled = orderLocked || groupIndex <= 0;
+        downButton.disabled = orderLocked || groupIndex < 0 || groupIndex >= group.length - 1;
         upButton.addEventListener("click", () => moveTaskWithinGroup(task.id, -1));
         downButton.addEventListener("click", () => moveTaskWithinGroup(task.id, 1));
         orderActions.append(upButton, downButton);
         actions.append(orderActions);
+        if (orderLocked) {
+          actions.append(createElement(
+            "span",
+            "day-task-card__order-hint",
+            "Сбросьте поиск и фильтры, чтобы изменить порядок",
+          ));
+        }
 
         const editButton = createTaskIconButton("Редактировать", "✎");
         const copyButton = createTaskIconButton("Копировать", "⧉");
@@ -859,6 +1022,13 @@
 
   function renderDaySidebar() {
     if (!daySidebarVisible) {
+      return;
+    }
+    if (hasActiveFilters()) {
+      setText(elements.daySidebarTitle, `Результаты · ${formatMonthTitle(displayedMonth)}`);
+      elements.createSidebarTaskButton.disabled = true;
+      elements.createSidebarTaskButton.title = "Сбросьте фильтры и выберите конкретный день для создания задачи";
+      renderDayTaskList(elements.daySidebarTaskList, { filterOverview: true });
       return;
     }
     if (!selectedDateKey) {
@@ -995,6 +1165,7 @@
       }
 
       button.addEventListener("click", () => openDayDialog(cell.dateKey, button));
+      button.addEventListener("keydown", (event) => handleCalendarDayKeydown(event, cell.dateKey));
       fragment.append(button);
     });
 
@@ -1008,7 +1179,11 @@
     elements.notebookList.replaceChildren();
     const tasks = getNotebookTasks();
     if (tasks.length === 0) {
-      elements.notebookList.append(createElement("p", "notebook-empty", "Здесь будут задачи без назначенной даты"));
+      renderListEmptyState(
+        elements.notebookList,
+        "Здесь будут задачи без назначенной даты",
+        hasActiveFilters({ includeStatus: false }),
+      );
       return;
     }
 
@@ -1043,8 +1218,8 @@
     elements.daySidebar.hidden = !daySidebarVisible;
     elements.appMain.classList.toggle("app-main--with-day-panel", daySidebarVisible);
     elements.storageError.hidden = true;
-    elements.calendarHint.hidden = (currentState?.tasks.length ?? 0) > 0;
     setText(elements.storageStatus, "Локальные данные готовы");
+    renderFilterControls();
     renderCalendar();
     if (elements.dayDialog.open) {
       renderDayDialog();
@@ -1053,6 +1228,7 @@
     if (elements.notebookDialog.open) {
       renderNotebook();
     }
+    updateCalendarHint();
   }
 
   function showStorageError(result) {
@@ -1062,6 +1238,7 @@
     elements.daySidebar.hidden = true;
     elements.appMain.classList.toggle("app-main--with-day-panel", false);
     elements.storageError.hidden = false;
+    setFilterControlsDisabled(true);
     elements.clearStorageButton.hidden = !isReadError;
 
     if (isReadError) {
@@ -1330,6 +1507,34 @@
     }
     calendarWheelLockedUntil = timestamp + 350;
     changeMonth(event.deltaY > 0 ? 1 : -1);
+  }
+
+  function handleCalendarDayKeydown(event, dateKey) {
+    const offsets = {
+      ArrowLeft: -1,
+      ArrowRight: 1,
+      ArrowUp: -7,
+      ArrowDown: 7,
+    };
+    const offset = offsets[event.key];
+    if (!offset) {
+      return;
+    }
+    event.preventDefault();
+    const date = parseDateKey(dateKey);
+    if (!date) {
+      return;
+    }
+    const target = new Date(date.getFullYear(), date.getMonth(), date.getDate() + offset);
+    const targetKey = toDateKey(target.getFullYear(), target.getMonth(), target.getDate());
+    if (
+      displayedMonth.getFullYear() !== target.getFullYear()
+      || displayedMonth.getMonth() !== target.getMonth()
+    ) {
+      displayedMonth = new Date(target.getFullYear(), target.getMonth(), 1);
+      renderCalendar();
+    }
+    findRenderedDayButton(targetKey)?.focus();
   }
 
   function goToToday() {
@@ -1812,6 +2017,20 @@
     }
   }
 
+  elements.searchInput.addEventListener("input", () => {
+    filterState.search = elements.searchInput.value;
+    renderFilteredViews();
+  });
+  elements.organizationFilter.addEventListener("change", () => {
+    filterState.organizationId = elements.organizationFilter.value;
+    renderFilteredViews();
+  });
+  elements.statusFilter.addEventListener("change", () => {
+    const value = elements.statusFilter.value;
+    filterState.status = ["all", "incomplete", "completed"].includes(value) ? value : "all";
+    renderFilteredViews();
+  });
+  elements.resetFiltersButton.addEventListener("click", resetFilters);
   elements.previousMonthButton.addEventListener("click", () => changeMonth(-1));
   elements.nextMonthButton.addEventListener("click", () => changeMonth(1));
   elements.todayButton.addEventListener("click", goToToday);
