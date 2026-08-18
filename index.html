@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light">
+  <title>Рабочий планировщик</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div class="app-shell" id="app" data-app-state="loading">
+    <header class="app-header">
+      <div class="brand">
+        <p class="brand__eyebrow">Планирование клиентских задач</p>
+        <h1 class="brand__title">Рабочий планировщик</h1>
+      </div>
+
+      <div class="month-navigation" aria-label="Навигация по календарю">
+        <button class="icon-button" id="previousMonthButton" type="button" aria-label="Предыдущий месяц">‹</button>
+        <h2 class="month-navigation__title" id="monthTitle" aria-live="polite"></h2>
+        <button class="icon-button" id="nextMonthButton" type="button" aria-label="Следующий месяц">›</button>
+        <button class="button button--quiet" id="todayButton" type="button">Сегодня</button>
+      </div>
+
+      <div class="header-actions">
+        <button class="button button--secondary" id="notebookButton" type="button">Блокнот</button>
+        <button class="button button--primary" id="createTaskButton" type="button">Создать новую задачу</button>
+      </div>
+
+      <div class="storage-status" aria-live="polite">
+        <span class="storage-status__dot" aria-hidden="true"></span>
+        <span id="storageStatus">Проверка локальных данных…</span>
+      </div>
+    </header>
+
+    <section class="toolbar" aria-label="Поиск и фильтры">
+      <label class="field field--search">
+        <span class="visually-hidden">Поиск по описанию</span>
+        <input id="searchInput" type="search" placeholder="Поиск по описанию" disabled
+               title="Поиск будет добавлен на шаге 5">
+      </label>
+      <label class="field">
+        <span class="visually-hidden">Организация</span>
+        <select id="organizationFilter" disabled title="Фильтр будет добавлен на шаге 5">
+          <option>Все организации</option>
+        </select>
+      </label>
+      <label class="field">
+        <span class="visually-hidden">Статус</span>
+        <select id="statusFilter" disabled title="Фильтр будет добавлен на шаге 5">
+          <option>Все задачи</option>
+        </select>
+      </label>
+      <button class="button button--quiet" id="resetFiltersButton" type="button" disabled
+              title="Сброс фильтров будет добавлен на шаге 5">Сбросить</button>
+      <p class="toolbar__hint" id="calendarHint">Выберите день, чтобы посмотреть его задачи</p>
+    </section>
+
+    <main class="app-main">
+      <section class="calendar-panel" id="calendarPanel" aria-labelledby="monthTitle">
+        <div class="weekday-row" aria-hidden="true">
+          <span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span>
+        </div>
+        <div class="calendar-grid" id="calendarGrid"></div>
+      </section>
+
+      <section class="blocking-state" id="storageError" role="alert" aria-live="assertive" hidden>
+        <div class="blocking-state__mark" aria-hidden="true">!</div>
+        <div class="blocking-state__content">
+          <h2 id="storageErrorTitle">Не удалось прочитать локальные данные</h2>
+          <p id="storageErrorText">Данные не были изменены.</p>
+          <div class="blocking-state__actions">
+            <button class="button button--primary" id="retryStorageButton" type="button">Повторить чтение</button>
+            <button class="button button--danger" id="clearStorageButton" type="button">Очистить локальные данные</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  </div>
+
+  <dialog class="day-dialog" id="dayDialog" aria-labelledby="dayDialogTitle">
+    <div class="day-dialog__content">
+      <header class="day-dialog__header">
+        <div>
+          <p class="day-dialog__eyebrow">Задачи на день</p>
+          <h2 id="dayDialogTitle"></h2>
+        </div>
+        <button class="icon-button day-dialog__close" id="closeDayDialogButton" type="button"
+                aria-label="Закрыть окно">×</button>
+      </header>
+      <div class="day-dialog__actions">
+        <button class="button button--primary" id="createDayTaskButton" type="button">Создать задачу</button>
+      </div>
+      <div class="day-task-list" id="dayTaskList"></div>
+    </div>
+  </dialog>
+
+  <dialog class="task-form-dialog" id="taskFormDialog" aria-labelledby="taskFormTitle">
+    <form class="task-form" id="taskForm" novalidate>
+      <header class="task-form__header">
+        <div>
+          <p class="day-dialog__eyebrow" id="taskFormModeLabel">Новая задача</p>
+          <h2 id="taskFormTitle">Создать задачу</h2>
+        </div>
+        <button class="icon-button" id="closeTaskFormButton" type="button" aria-label="Закрыть">×</button>
+      </header>
+
+      <div class="task-form__body">
+        <div class="form-group">
+          <label for="organizationInput">Организации</label>
+          <div class="organization-tags" id="organizationTags" aria-live="polite"></div>
+          <div class="organization-entry">
+            <input id="organizationInput" type="text" maxlength="100" list="organizationSuggestions"
+                   autocomplete="off" placeholder="Введите название и нажмите Enter">
+            <button class="button button--quiet" id="addOrganizationButton" type="button">Добавить</button>
+          </div>
+          <datalist id="organizationSuggestions"></datalist>
+          <p class="form-help">До 5 организаций. Для общей задачи добавьте несколько.</p>
+          <p class="form-error" id="organizationError" role="alert" hidden></p>
+        </div>
+
+        <div class="form-group form-group--date">
+          <label for="taskDateInput">Дата</label>
+          <div class="date-entry">
+            <input id="taskDateInput" type="date">
+            <button class="button button--quiet" id="clearTaskDateButton" type="button">Без даты</button>
+          </div>
+          <p class="form-help" id="dateHelp">Без даты задача будет сохранена в блокноте.</p>
+          <p class="form-error" id="dateError" role="alert" hidden></p>
+        </div>
+
+        <div class="form-group">
+          <div class="form-label-row">
+            <label for="taskDescriptionInput">Описание задачи</label>
+            <span id="descriptionCounter">0 / 3000</span>
+          </div>
+          <textarea id="taskDescriptionInput" rows="7" maxlength="3000"
+                    placeholder="Опишите, что нужно сделать"></textarea>
+          <p class="form-error" id="descriptionError" role="alert" hidden></p>
+        </div>
+
+        <p class="form-error form-error--summary" id="taskFormError" role="alert" hidden></p>
+      </div>
+
+      <footer class="task-form__footer">
+        <button class="button" id="cancelTaskFormButton" type="button">Отмена</button>
+        <button class="button button--primary" id="saveTaskButton" type="submit">Сохранить</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <dialog class="notebook-dialog" id="notebookDialog" aria-labelledby="notebookDialogTitle">
+    <div class="notebook-dialog__content">
+      <header class="notebook-dialog__header">
+        <div>
+          <p class="day-dialog__eyebrow">Задачи без даты</p>
+          <h2 id="notebookDialogTitle">Блокнот</h2>
+        </div>
+        <button class="icon-button" id="closeNotebookButton" type="button" aria-label="Закрыть">×</button>
+      </header>
+      <div class="notebook-list" id="notebookList"></div>
+    </div>
+  </dialog>
+
+  <dialog class="transfer-dialog" id="transferDialog" aria-labelledby="transferDialogTitle">
+    <div class="dialog__content">
+      <h2 id="transferDialogTitle">Перенести задачу</h2>
+      <p id="transferTaskLabel"></p>
+      <div class="form-group">
+        <label for="transferDateInput">Новая дата</label>
+        <input id="transferDateInput" type="date">
+        <p class="form-help" id="transferDateHelp"></p>
+        <p class="form-error" id="transferDateError" role="alert" hidden></p>
+      </div>
+      <div class="dialog__actions">
+        <button class="button" id="cancelTransferButton" type="button">Отмена</button>
+        <button class="button button--primary" id="confirmTransferButton" type="button">Перенести</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="unsaved-dialog" id="unsavedDialog" aria-labelledby="unsavedDialogTitle">
+    <div class="dialog__content">
+      <h2 id="unsavedDialogTitle">Есть несохранённые изменения</h2>
+      <p>Сохранить изменения перед закрытием формы?</p>
+      <div class="dialog__actions dialog__actions--three">
+        <button class="button" id="cancelUnsavedButton" type="button">Отмена</button>
+        <button class="button" id="discardUnsavedButton" type="button">Не сохранять</button>
+        <button class="button button--primary" id="saveUnsavedButton" type="button">Сохранить</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="confirm-action-dialog" id="confirmActionDialog" aria-labelledby="confirmActionTitle">
+    <div class="dialog__content">
+      <h2 id="confirmActionTitle">Подтвердите действие</h2>
+      <p id="confirmActionText"></p>
+      <div class="dialog__actions">
+        <button class="button" id="cancelActionButton" type="button">Отмена</button>
+        <button class="button button--danger" id="confirmActionButton" type="button">Подтвердить</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="dialog" id="clearStorageDialog" aria-labelledby="clearStorageDialogTitle">
+    <form method="dialog" class="dialog__content">
+      <h2 id="clearStorageDialogTitle">Очистить повреждённые данные?</h2>
+      <p>Повреждённые локальные данные будут удалены без возможности восстановления.</p>
+      <div class="dialog__actions">
+        <button class="button" value="cancel" autofocus>Отмена</button>
+        <button class="button button--danger" id="confirmClearStorageButton" value="confirm">Удалить данные</button>
+      </div>
+    </form>
+  </dialog>
+
+  <noscript>
+    <p class="noscript-message">Для работы планировщика необходимо включить JavaScript.</p>
+  </noscript>
+</body>
+</html>

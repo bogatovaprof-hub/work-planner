@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Финмодель аренды · дивиденды и безубыточность</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--paper:#F7F3EC;--card:#FFFFFF;--ink:#1B1A16;--muted:#6E6A60;--dim:#9A958A;--line:#E3DDD1;--line2:#EFEAE0;
+    --green:#1F6F54;--green-soft:#E7F0EB;--red:#B23A2C;--red-soft:#F6E7E3;--gold:#9C7A1E;--accent:#1F6F54;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--paper);color:var(--ink);font-family:'Archivo',sans-serif;font-size:14px;line-height:1.45}
+  .app{display:grid;grid-template-columns:330px 1fr;min-height:100vh}
+  .side{background:#FBF8F2;border-right:1px solid var(--line);position:sticky;top:0;height:100vh;overflow-y:auto}
+  .side-head{padding:20px 20px 14px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#FBF8F2;z-index:5}
+  .side-head .t{font-family:'Newsreader',serif;font-weight:600;font-size:18px}
+  .side-head .s{color:var(--muted);font-size:12px;margin-top:2px}
+  .grp{padding:14px 20px 4px}
+  .grp h4{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:8px}
+  .inp{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px solid var(--line2)}
+  .inp label{color:var(--muted);font-size:12.5px;flex:1}
+  .inp .ctrl{display:flex;align-items:baseline;gap:5px}
+  .inp input,.inp select{font-family:'Archivo';font-weight:600;font-size:14px;color:var(--ink);text-align:right;
+    border:1px solid transparent;background:#fff;border-radius:7px;padding:5px 8px;width:112px;outline:none;font-variant-numeric:tabular-nums;transition:.15s}
+  .inp input:focus,.inp select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(31,111,84,.1)}
+  .inp .u{color:var(--dim);font-size:11px;white-space:nowrap;width:48px;text-align:left}
+  .hintline{font-size:11px;color:var(--dim);padding:2px 0 6px}
+  .calc{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line2);font-size:12.5px}
+  .calc b{font-family:'Newsreader',serif;font-weight:600}
+  .incs{padding:0 20px}
+  .inc-row{display:grid;grid-template-columns:1fr 1fr 22px;gap:6px;align-items:center;margin-bottom:6px}
+  .inc-row input,.inc-row select{width:100%;padding:4px 6px;font-size:12.5px;text-align:right;border:1px solid var(--line);border-radius:6px;font-family:'Archivo';font-weight:600;background:#fff}
+  .inc-row .x{cursor:pointer;color:var(--red);text-align:center;font-weight:700}
+  .inc-head{display:grid;grid-template-columns:1fr 1fr 22px;gap:6px;font-size:10px;color:var(--dim);margin-bottom:4px;text-transform:uppercase}
+  .addbtn{margin:6px 0 4px;font-size:12px;font-weight:600;color:var(--accent);background:var(--green-soft);border:1px solid #cfe1d8;border-radius:7px;padding:6px 10px;cursor:pointer;width:100%}
+  .toolbar{padding:14px 20px 24px;display:flex;gap:8px;flex-direction:column}
+  .toolbar .b{font-size:12.5px;font-weight:600;border-radius:8px;padding:9px;cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--ink);text-align:center}
+  .toolbar .b:hover{border-color:var(--accent);color:var(--accent)}
+  .main{padding:26px 30px 60px;max-width:1180px}
+  .pagehead{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:6px}
+  .pagehead h1{font-family:'Newsreader',serif;font-weight:600;font-size:30px;letter-spacing:-.3px}
+  .month-pick{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:6px 8px 6px 14px}
+  .month-pick span{font-size:12px;color:var(--muted)}
+  .month-pick select{font-family:'Archivo';font-weight:700;font-size:15px;border:0;background:#fff;color:var(--accent);outline:none;cursor:pointer}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:20px}.sub b{color:var(--ink)}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:14px 15px}
+  .kpi .l{font-size:11.5px;color:var(--muted)}
+  .kpi .v{font-family:'Newsreader',serif;font-weight:600;font-size:25px;margin-top:5px;font-variant-numeric:tabular-nums;letter-spacing:-.3px}
+  .kpi .sub2{font-size:11px;color:var(--dim);margin-top:2px}
+  .v.pos{color:var(--green)}.v.neg{color:var(--red)}
+  .panels{display:grid;grid-template-columns:1.2fr 1fr;gap:14px;margin:8px 0 6px}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+  .panel h3{font-family:'Newsreader',serif;font-size:17px;font-weight:600;margin-bottom:4px}
+  .panel .hint{font-size:11.5px;color:var(--dim);margin-bottom:14px}
+  .belines{display:flex;flex-direction:column;gap:11px}
+  .beline{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding-bottom:9px;border-bottom:1px solid var(--line2)}
+  .beline .k{font-size:13px;color:var(--muted)}
+  .beline .val{font-family:'Newsreader',serif;font-weight:600;font-size:19px;font-variant-numeric:tabular-nums}
+  .beline .val small{font-size:.62em;color:var(--muted);font-family:'Archivo';font-weight:600}
+  .bebar{margin-top:14px}
+  .bebar .track{position:relative;height:30px;border-radius:8px;background:#F0ECE3;border:1px solid var(--line)}
+  .bebar .fill{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#d8e7df,#9cc7b5);border-radius:7px 0 0 7px;transition:width .3s}
+  .bebar .m{position:absolute;top:-5px;bottom:-5px;width:2px;transition:left .3s}
+  .bebar .m span{position:absolute;font-size:10px;white-space:nowrap;left:50%;transform:translateX(-50%);font-weight:700}
+  .bebar .m.op{background:var(--gold)}.bebar .m.op span{top:-17px;color:var(--gold)}
+  .bebar .m.div{background:var(--red)}.bebar .m.div span{bottom:-17px;color:var(--red)}
+  .bebar .ends{display:flex;justify-content:space-between;color:var(--dim);font-size:10px;margin-top:22px}
+  .verdict{margin-top:14px;font-size:13px;font-weight:500;padding:10px 13px;border-radius:9px;border:1px solid}
+  .verdict.ok{background:var(--green-soft);border-color:#cfe1d8;color:#1c5a45}
+  .verdict.bad{background:var(--red-soft);border-color:#ecccc4;color:#8f2f23}
+  .tablewrap{margin-top:26px;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff}
+  .tabletitle{padding:14px 18px;border-bottom:1px solid var(--line);font-family:'Newsreader',serif;font-weight:600;font-size:17px}
+  .scroll{overflow-x:auto}
+  table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:12.5px;white-space:nowrap}
+  th,td{padding:7px 10px;text-align:right;border-bottom:1px solid var(--line2)}
+  th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:#fff;z-index:2;min-width:235px;border-right:1px solid var(--line)}
+  thead th{background:#FBF8F2;font-weight:600;color:var(--muted);font-size:11.5px;position:sticky;top:0;z-index:3}
+  thead th:first-child{z-index:4}
+  .rsec td{background:#F4EFE6;font-weight:700;color:var(--gold);font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+  .rtot td,.rtot th{font-weight:700;border-top:1px solid var(--line)}
+  td.neg{color:var(--red)}
+  .colsel{box-shadow:inset 0 0 0 2px rgba(31,111,84,.3)}
+  .foot-note{padding:12px 18px;font-size:11.5px;color:var(--dim);border-top:1px solid var(--line);line-height:1.55}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(40px);background:var(--ink);color:#fff;padding:10px 18px;border-radius:999px;font-size:13px;font-weight:600;opacity:0;transition:.3s;z-index:99}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  input[type=file]{display:none}
+  @media(max-width:920px){.app{grid-template-columns:1fr}.side{position:static;height:auto}.kpis{grid-template-columns:repeat(2,1fr)}.panels{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="side-head"><div class="t">Драйверы и расходы</div><div class="s">Меняйте любые цифры — всё пересчитается</div></div>
+
+    <div class="grp"><h4>Аренда</h4>
+      <div class="inp"><label>Общая площадь</label><div class="ctrl"><input id="total" type="number" step="0.1"><span class="u">м²</span></div></div>
+      <div class="inp"><label>Сдаётся</label><div class="ctrl"><input id="area" type="number" step="1"><span class="u">м²</span></div></div>
+      <div class="inp"><label>Ставка аренды</label><div class="ctrl"><input id="rate" type="number" step="1"><span class="u">₽/м²</span></div></div>
+      <div class="inp"><label>Коммунальные расходы</label><div class="ctrl"><input id="communal" type="number" step="1000"><span class="u">₽/мес</span></div></div>
+      <div class="hintline">Коммунальные входят и в аренду (выручку), и в расходы; с них платится УСН.</div>
+    </div>
+
+    <div class="grp"><h4>Повышения ставки (+₽/м² с месяца)</h4></div>
+    <div class="incs">
+      <div class="inc-head"><span>месяц</span><span>+₽/м²</span><span></span></div>
+      <div id="incList"></div>
+      <button class="addbtn" id="addInc">+ добавить повышение</button>
+    </div>
+
+    <div class="grp"><h4>Расходы, ₽/мес</h4>
+      <div class="inp"><label>Зарплата директора</label><div class="ctrl"><input id="salary" type="number" step="1000"><span class="u">₽/мес</span></div></div>
+      <div class="inp"><label>Страховые взносы</label><div class="ctrl"><input id="insRate" type="number" step="0.001"><span class="u">доля</span></div></div>
+      <div class="inp"><label>Фин. консалтинг</label><div class="ctrl"><input id="finconsult" type="number" step="1000"><span class="u">₽/мес</span></div></div>
+      <div class="inp"><label>РКО / банк</label><div class="ctrl"><input id="bank" type="number" step="500"><span class="u">₽/мес</span></div></div>
+      <div class="inp"><label>Прочие расходы</label><div class="ctrl"><input id="other" type="number" step="500"><span class="u">₽/мес</span></div></div>
+    </div>
+
+    <div class="grp"><h4>Налоги и капвложения</h4>
+      <div class="inp"><label>УСН (доходы)</label><div class="ctrl"><input id="usn" type="number" step="0.01"><span class="u">доля</span></div></div>
+      <div class="inp"><label>Налог на имущество</label><div class="ctrl"><input id="propTaxQ" type="number" step="1000"><span class="u">₽/кв</span></div></div>
+      <div class="inp"><label>Аренда земли</label><div class="ctrl"><input id="land" type="number" step="100"><span class="u">₽/мес</span></div></div>
+      <div class="inp"><label>Капвложения</label><div class="ctrl"><input id="capexAmt" type="number" step="50000"><span class="u">₽</span></div></div>
+      <div class="inp"><label>Капвложения в месяц</label><div class="ctrl"><select id="capexMonth"></select></div></div>
+    </div>
+
+    <div class="grp"><h4>Дивиденды</h4>
+      <div class="inp"><label>Желаемо на руки</label><div class="ctrl"><input id="divNetMonth" type="number" step="10000"><span class="u">₽/мес</span></div></div>
+      <div class="calc"><span>За квартал (×3)</span><b id="divQ">—</b></div>
+      <div class="inp"><label>НДФЛ на дивиденды</label><div class="ctrl"><input id="ndfl" type="number" step="0.01"><span class="u">доля</span></div></div>
+      <div class="hintline">Выплата раз в квартал (окт, янв, апр, июл). Платится только в пределах накопленных денег — остаток не уходит в минус.</div>
+    </div>
+
+    <div class="toolbar">
+      <label class="b" for="file">⬆ Загрузить расходы из Excel</label>
+      <input type="file" id="file" accept=".xlsx,.xlsm">
+      <button class="b" id="reset">Сбросить к значениям по умолчанию</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="pagehead">
+      <h1>Аренда · дивиденды и безубыточность</h1>
+      <div class="month-pick"><span>Показать месяц:</span><select id="selMonth"></select></div>
+    </div>
+    <div class="sub">Верхний уровень — за выбранный месяц (<b id="selLabel">—</b>). Внизу — прибыль и ДДС по всем 12 месяцам (июль 2026 – июнь 2027).</div>
+
+    <div class="kpis">
+      <div class="kpi"><div class="l">Ставка аренды (эфф.)</div><div class="v" id="kRate">—</div><div class="sub2">₽/м²/мес в этом месяце</div></div>
+      <div class="kpi"><div class="l">Выручка (аренда+коммун.)</div><div class="v" id="kRev">—</div><div class="sub2" id="kRevSub">за месяц</div></div>
+      <div class="kpi"><div class="l">Операционная прибыль</div><div class="v" id="kProfit">—</div><div class="sub2">выручка − УСН − расходы</div></div>
+      <div class="kpi"><div class="l">Остаток денег (накопл.)</div><div class="v" id="kCash">—</div><div class="sub2" id="kCashSub">на конец месяца</div></div>
+    </div>
+
+    <div class="panels">
+      <div class="panel">
+        <h3>Точка безубыточности при заданной цене</h3>
+        <div class="hint">Ставка выбранного месяца: <b id="beRate">—</b> ₽/м². Покрытие = расходы и расходы + желаемые дивиденды (300 000 ₽/мес на руки).</div>
+        <div class="belines">
+          <div class="beline"><span class="k">Покрыть только расходы</span><span class="val" id="beOp">—</span></div>
+          <div class="beline"><span class="k">Покрыть расходы + дивиденды</span><span class="val" id="beDiv">—</span></div>
+          <div class="beline"><span class="k">Сейчас сдаётся</span><span class="val" id="beCur">—</span></div>
+        </div>
+        <div class="bebar">
+          <div class="track"><div class="fill" id="beFill" style="width:0%"></div>
+            <div class="m op" id="beMop" style="left:0%"><span>расходы</span></div>
+            <div class="m div" id="beMdiv" style="left:0%"><span>+дивиденды</span></div>
+          </div>
+          <div class="ends"><span>0%</span><span>50%</span><span>100% · <span id="endTotal">894,4</span> м²</span></div>
+        </div>
+        <div class="verdict" id="beVerdict">—</div>
+      </div>
+
+      <div class="panel">
+        <h3>Дивиденды за год</h3>
+        <div class="hint">База — операционная прибыль. Выплата ограничена накопленными деньгами.</div>
+        <div class="belines">
+          <div class="beline"><span class="k">Желаемо на руки (12 мес)</span><span class="val" id="dvWant">—</span></div>
+          <div class="beline"><span class="k">Выплачено на руки (3 выпл.)</span><span class="val" id="dvPaid">—</span></div>
+          <div class="beline"><span class="k">НДФЛ за год</span><span class="val" id="dvNdfl">—</span></div>
+          <div class="beline"><span class="k">Операц. прибыль за год</span><span class="val" id="dvOp">—</span></div>
+          <div class="beline"><span class="k">Нужная ставка при текущей площади</span><span class="val" id="dvReqRate">—</span></div>
+        </div>
+        <div class="verdict" id="dvVerdict">—</div>
+      </div>
+    </div>
+
+    <div class="tablewrap">
+      <div class="tabletitle">Прибыль и ДДС по месяцам · июль 2026 – июнь 2027</div>
+      <div class="scroll"><table id="tbl"></table></div>
+      <div class="foot-note" id="footNote"></div>
+    </div>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+const MLAB=['июл.26','авг.26','сен.26','окт.26','ноя.26','дек.26','янв.27','фев.27','мар.27','апр.27','май.27','июн.27'];
+const PAY=[4,7,10]; // месяцы выплаты дивидендов в окне (4-я — июль, вне года)
+const DEF={total:894.4,area:894.4,rate:358,communal:70000,
+  salary:50000,insRate:0.306,finconsult:40000,bank:2000,other:5000,
+  usn:0.06,propTaxQ:105287,land:51694.99,capexAmt:0,capexMonth:1,
+  divNetMonth:300000,ndfl:0.15,increases:[],selMonth:1};
+let S=JSON.parse(JSON.stringify(DEF));
+const ru=n=>Math.round(n).toLocaleString('ru-RU');
+const ru1=n=>(+n).toLocaleString('ru-RU',{minimumFractionDigits:1,maximumFractionDigits:1});
+const pct=x=>(x*100).toLocaleString('ru-RU',{minimumFractionDigits:1,maximumFractionDigits:1})+'%';
+const cls=n=>n<0?'neg':'';
+
+function rateAt(m){let r=+S.rate;S.increases.forEach(i=>{if(+i.m<=m)r+=(+i.a||0);});return r;}
+function monthCalc(m){
+  const rt=rateAt(m),area=+S.area,communal=+S.communal;
+  const rentBase=area*rt, revenue=rentBase+communal, ins=(+S.salary)*(+S.insRate);
+  const usnA=revenue*(+S.usn), usnPay=usnA-Math.min(ins,usnA*0.5), ptAcc=(+S.propTaxQ)/3;
+  const opexA=(+S.salary)+ins+(+S.finconsult)+(+S.bank)+communal+(+S.other)+ptAcc+(+S.land);
+  const opexCash=(+S.salary)+ins+(+S.finconsult)+(+S.bank)+communal+(+S.other)+(+S.land);
+  return {rt,area,communal,rentBase,revenue,ins,usnPay,ptAcc,opexA,opexCash,opProfit:revenue-usnPay-opexA};
+}
+function model(){
+  const M=[];for(let m=1;m<=12;m++)M[m]=monthCalc(m);
+  const grossQ=((+S.divNetMonth)*3)/(1-(+S.ndfl));
+  let bal=0,capped=false;const rows=[];
+  for(let m=1;m<=12;m++){const x=M[m];
+    const usnCash=m===4?(M[1].usnPay+M[2].usnPay+M[3].usnPay):m===10?(M[4].usnPay+M[5].usnPay+M[6].usnPay+M[7].usnPay+M[8].usnPay+M[9].usnPay):0;
+    const ptCash=[4,8,10].includes(m)?(+S.propTaxQ):0;
+    const capex=m===(+S.capexMonth)?(+S.capexAmt):0;
+    const bb=bal+x.revenue-x.opexCash-usnCash-ptCash-capex;
+    let dG=0,dN=0,dH=0;
+    if(PAY.includes(m)){dG=Math.max(0,Math.min(grossQ,bb));if(grossQ-dG>1)capped=true;dN=dG*(1-(+S.ndfl));dH=dG*(+S.ndfl);}
+    bal=bb-dG;
+    rows[m]={...x,usnCash,ptCash,capex,dG,dN,dH,net:x.revenue-x.opexCash-usnCash-ptCash-capex-dG,bal};
+  }
+  let c=0;const cumOp=[];for(let m=1;m<=12;m++){c+=M[m].opProfit;cumOp[m]=c;}
+  return {M,rows,cumOp,grossQ,capped};
+}
+function compute(){
+  const md=model(),sel=+S.selMonth,ms=md.M[sel],r=md.rows[sel];
+  const rate=ms.rt,total=+S.total,area=+S.area;
+  const FC=(+S.salary)+ms.ins+(+S.finconsult)+(+S.bank)+(+S.other)+ms.ptAcc+(+S.land);
+  const gmt=(+S.divNetMonth)/(1-(+S.ndfl));
+  const denom=rate*(1-(+S.usn));
+  const aOp=(FC+(+S.communal)*(+S.usn))/denom;
+  const aDiv=(FC+(+S.communal)*(+S.usn)+gmt)/denom;
+  const reqRate=area>0?(FC+((+S.communal)*(+S.usn))+gmt)/(area*(1-(+S.usn))):0;
+  const annualOp=md.cumOp[12];
+  const wantYear=(+S.divNetMonth)*12;
+  const paidNet=md.rows.reduce((a,r)=>a+(r?r.dN:0),0);
+  const paidNdfl=md.rows.reduce((a,r)=>a+(r?r.dH:0),0);
+  return {md,sel,ms,r,rate,total,area,FC,gmt,aOp,aDiv,reqRate,annualOp,wantYear,paidNet,paidNdfl};
+}
+function setV(id,t,k){const e=document.getElementById(id);e.textContent=t;if(k!==undefined)e.className='v '+k;}
+function render(){
+  const C=compute(),ms=C.ms,r=C.r,total=C.total;
+  document.getElementById('selLabel').textContent=MLAB[C.sel-1];
+  setV('kRate',ru(ms.rt)+' ₽','');
+  setV('kRev',ru(ms.revenue)+' ₽','');
+  document.getElementById('kRevSub').textContent='в т.ч. коммун. '+ru(ms.communal)+' ₽';
+  setV('kProfit',ru(ms.opProfit)+' ₽',cls(ms.opProfit));
+  setV('kCash',ru(r.bal)+' ₽',cls(r.bal));
+  document.getElementById('kCashSub').textContent='чистый поток: '+(r.net<0?'−':'')+ru(Math.abs(r.net))+' ₽';
+  document.getElementById('beRate').textContent=ru(C.rate);
+  document.getElementById('endTotal').textContent=ru1(total);
+  document.getElementById('beOp').innerHTML=ru1(C.aOp)+' м² <small>'+pct(C.aOp/total)+'</small>';
+  document.getElementById('beDiv').innerHTML=ru1(C.aDiv)+' м² <small>'+pct(C.aDiv/total)+'</small>';
+  document.getElementById('beCur').innerHTML=ru1(C.area)+' м² <small>'+pct(C.area/total)+'</small>';
+  document.getElementById('beFill').style.width=Math.min(100,C.area/total*100)+'%';
+  document.getElementById('beMop').style.left=Math.min(100,C.aOp/total*100)+'%';
+  document.getElementById('beMdiv').style.left=Math.min(100,C.aDiv/total*100)+'%';
+  const bv=document.getElementById('beVerdict');
+  if(C.area>=C.aDiv){bv.className='verdict ok';bv.textContent='При этой ставке текущей площади хватает и на расходы, и на желаемые дивиденды.';}
+  else if(C.area>=C.aOp){bv.className='verdict bad';bv.textContent='Расходы покрываются, на дивиденды — нет. Нужно '+ru1(C.aDiv)+' м² ('+pct(C.aDiv/total)+') или ставка ≥ '+ru(C.reqRate)+' ₽/м².';}
+  else {bv.className='verdict bad';bv.textContent='Не покрываются даже расходы (нужно от '+ru1(C.aOp)+' м²). Поднимите ставку или площадь.';}
+  document.getElementById('dvWant').innerHTML=ru(C.wantYear)+' ₽';
+  document.getElementById('dvPaid').innerHTML=ru(C.paidNet)+' ₽';
+  document.getElementById('dvNdfl').innerHTML=ru(C.paidNdfl)+' ₽';
+  document.getElementById('dvOp').innerHTML=ru(C.annualOp)+' ₽';
+  document.getElementById('dvReqRate').innerHTML=ru(C.reqRate)+' <small>₽/м²</small>';
+  const dv=document.getElementById('dvVerdict');
+  const sustainNet=Math.max(0,C.annualOp)*(1-(+S.ndfl));
+  if(C.area>=C.aDiv && sustainNet>=C.wantYear){dv.className='verdict ok';dv.textContent='Желаемые дивиденды достижимы при текущей цене и площади.';}
+  else {dv.className='verdict bad';dv.textContent='Желаемые дивиденды (300 000 ₽/мес) при ставке '+ru(C.rate)+' ₽/м² недостижимы: нужна ставка ≈ '+ru(C.reqRate)+' ₽/м² при текущей площади. Выплата ограничена накопленными деньгами.';}
+  document.getElementById('divQ').textContent=ru((+S.divNetMonth)*3)+' ₽';
+  buildTable(C);
+  ['total','area','rate','communal','salary','insRate','finconsult','bank','other','usn','propTaxQ','land','capexAmt','divNetMonth','ndfl'].forEach(k=>{const e=document.getElementById(k);if(e&&document.activeElement!==e)e.value=S[k];});
+}
+function buildTable(C){
+  const md=C.md,sel=C.sel;
+  const head='<thead><tr><th>Показатель, ₽</th>'+MLAB.map((l,i)=>`<th class="${i+1===sel?'colsel':''}">${l}</th>`).join('')+'<th>Итого</th></tr></thead>';
+  const rows=[];
+  function line(label,fn,opt={}){let sum=0;const cells=[];for(let m=1;m<=12;m++){const v=fn(md.rows[m],m);sum+=v;cells.push(`<td class="${cls(v)} ${m===sel?'colsel':''}">${v?(v<0?'−':'')+ru(Math.abs(v)):'—'}</td>`);}rows.push(`<tr class="${opt.cls||''}"><th>${label}</th>${cells.join('')}<td class="${cls(sum)}">${sum<0?'−':''}${ru(Math.abs(sum))}</td></tr>`);}
+  rows.push(`<tr class="rsec"><td>ПРИБЫЛЬ (начисление)</td>${MLAB.map(()=>'<td></td>').join('')}<td></td></tr>`);
+  line('Выручка (аренда + коммун.)',r=>r.revenue);
+  line('УСН (начислено)',r=>-r.usnPay);
+  line('Расходы (всего)',r=>-r.opexA);
+  line('Операционная прибыль',r=>r.opProfit,{cls:'rtot'});
+  rows.push(`<tr class="rsec"><td>ДДС (деньги)</td>${MLAB.map(()=>'<td></td>').join('')}<td></td></tr>`);
+  line('Поступления (аренда + коммун.)',r=>r.revenue);
+  line('Операционные расходы (касса)',r=>-r.opexCash);
+  line('УСН (уплата)',r=>-r.usnCash);
+  line('Налог на имущество (уплата)',r=>-r.ptCash);
+  line('Капвложения',r=>-r.capex);
+  line('Дивиденды на руки',r=>-r.dN);
+  line('НДФЛ с дивидендов',r=>-r.dH);
+  line('Чистый денежный поток',r=>r.net,{cls:'rtot'});
+  const cells=[];for(let m=1;m<=12;m++){const v=md.rows[m].bal;cells.push(`<td class="${cls(v)} ${m===sel?'colsel':''}">${v<0?'−':''}${ru(Math.abs(v))}</td>`);}
+  rows.push(`<tr class="rtot"><th>Остаток денег (накопл.)</th>${cells.join('')}<td></td></tr>`);
+  document.getElementById('tbl').innerHTML=head+'<tbody>'+rows.join('')+'</tbody>';
+  document.getElementById('footNote').innerHTML='Дивиденды: квартальная выплата = 300 000 ₽/мес × 3 = '+ru((+S.divNetMonth)*3)+' ₽ на руки, в окне года 3 выплаты (окт, янв, апр); 4-я (июль 2027) — вне показанного года. '+(md.capped?'<b style="color:var(--red)">Часть дивидендов урезана: накопленных денег не хватает на желаемую сумму.</b> ':'')+'Налоги: УСН — октябрь (за июл–сен) и апрель (за окт–мар); за апр–июн платится в июле (вне окна). Налог на имущество — окт, фев, апр (4-й платёж в июле, вне окна). Коммунальные облагаются УСН как доход. Безубыточность — консервативно (УСН без вычета взносов).';
+}
+function num(id){document.getElementById(id).addEventListener('input',e=>{const v=parseFloat(e.target.value);if(!isNaN(v)){S[id]=v;render();}});}
+['total','area','rate','communal','salary','insRate','finconsult','bank','other','usn','propTaxQ','land','capexAmt','divNetMonth','ndfl'].forEach(num);
+const selM=document.getElementById('selMonth'),capM=document.getElementById('capexMonth');
+MLAB.forEach((l,i)=>{selM.innerHTML+=`<option value="${i+1}">${l}</option>`;capM.innerHTML+=`<option value="${i+1}">${l}</option>`;});
+selM.addEventListener('change',e=>{S.selMonth=+e.target.value;render();});
+capM.addEventListener('change',e=>{S.capexMonth=+e.target.value;render();});
+function renderIncs(){const box=document.getElementById('incList');box.innerHTML='';
+  S.increases.forEach((inc,idx)=>{const row=document.createElement('div');row.className='inc-row';
+    let o='';MLAB.forEach((l,i)=>o+=`<option value="${i+1}" ${(+inc.m===i+1)?'selected':''}>${l}</option>`);
+    row.innerHTML=`<select data-i="${idx}" data-f="m">${o}</select><input type="number" step="10" data-i="${idx}" data-f="a" value="${inc.a}"><div class="x" data-del="${idx}">✕</div>`;
+    box.appendChild(row);});
+  box.querySelectorAll('select,input').forEach(el=>el.addEventListener('input',e=>{const i=+e.target.dataset.i,f=e.target.dataset.f;S.increases[i][f]=f==='m'?+e.target.value:(parseFloat(e.target.value)||0);render();}));
+  box.querySelectorAll('[data-del]').forEach(el=>el.addEventListener('click',e=>{S.increases.splice(+e.target.dataset.del,1);renderIncs();render();}));}
+document.getElementById('addInc').addEventListener('click',()=>{S.increases.push({m:7,a:50});renderIncs();render();});
+document.getElementById('reset').addEventListener('click',()=>{S=JSON.parse(JSON.stringify(DEF));selM.value=1;capM.value=1;renderIncs();render();toast('Сброшено');});
+document.getElementById('file').addEventListener('change',ev=>{const f=ev.target.files[0];if(!f)return;const rd=new FileReader();
+  rd.onload=e=>{try{const wb=XLSX.read(e.target.result,{type:'array'});const ws=wb.Sheets['Вводные'];if(!ws){toast('Лист «Вводные» не найден');return;}
+    const g=a=>ws[a]?ws[a].v:undefined,set=(k,a)=>{const x=g(a);if(typeof x==='number')S[k]=x;};
+    set('total','B6');set('usn','B9');set('salary','B26');set('insRate','B27');set('finconsult','B28');set('bank','B29');
+    set('communal','B35');set('other','B37');set('propTaxQ','B39');set('land','B40');
+    render();toast('Расходы загружены из файла');
+  }catch(err){toast('Не удалось прочитать файл');console.error(err);}};
+  rd.readAsArrayBuffer(f);});
+let tt;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2400);}
+renderIncs();render();
+</script>
+</body>
+</html>
