@@ -70,6 +70,12 @@
     notebookDialog: document.getElementById("notebookDialog"),
     notebookList: document.getElementById("notebookList"),
     closeNotebookButton: document.getElementById("closeNotebookButton"),
+    organizationEditDialog: document.getElementById("organizationEditDialog"),
+    organizationEditForm: document.getElementById("organizationEditForm"),
+    organizationEditNameInput: document.getElementById("organizationEditNameInput"),
+    organizationEditError: document.getElementById("organizationEditError"),
+    closeOrganizationEditButton: document.getElementById("closeOrganizationEditButton"),
+    cancelOrganizationEditButton: document.getElementById("cancelOrganizationEditButton"),
     transferDialog: document.getElementById("transferDialog"),
     transferTaskLabel: document.getElementById("transferTaskLabel"),
     transferDateInput: document.getElementById("transferDateInput"),
@@ -97,6 +103,8 @@
   let daySidebarVisible = false;
   let dayDialogOrigin = null;
   let notebookDialogOrigin = null;
+  let organizationEditId = null;
+  let organizationEditOrigin = null;
   let taskFormContext = null;
   let taskFormOrigin = null;
   let taskFormInitialSnapshot = null;
@@ -687,29 +695,26 @@
     return "Без организации";
   }
 
-  function appendOrganizationChips(container, organizations, className, options = {}) {
+  function appendOrganizationChips(container, organizations, className) {
     if (organizations.length === 0) {
       return;
     }
     const chips = createElement("div", className);
     organizations.forEach((organization) => {
-      if (options.taskId && options.mode) {
+      if (organization.id) {
         const chip = createElement(
           "button",
           "organization-chip organization-chip--editable",
           organization.name,
         );
         chip.type = "button";
-        chip.dataset.tooltip = "Двойной щелчок — изменить";
+        chip.dataset.organizationId = organization.id;
+        chip.dataset.tooltip = "Двойной щелчок — переименовать";
         chip.setAttribute(
           "aria-label",
-          `${organization.name}. Двойной щелчок или Enter — изменить организацию задачи`,
+          `${organization.name}. Двойной щелчок или Enter — переименовать организацию`,
         );
-        const openEditor = () => openTaskForm({
-          mode: options.mode,
-          taskId: options.taskId,
-          origin: chip,
-        });
+        const openEditor = () => openOrganizationEditDialog(organization.id, chip);
         chip.addEventListener("dblclick", openEditor);
         chip.addEventListener("keydown", (event) => {
           if (event.key === "Enter") {
@@ -796,10 +801,7 @@
       if (task.id === expandedTaskId) {
         const details = createElement("div", "day-task-card__details");
         details.append(createElement("p", "day-task-card__date", `Дата: ${formatShortDate(task.date)}`));
-        appendOrganizationChips(details, taskOrganizations(task), "day-task-card__organizations", {
-          taskId: task.id,
-          mode: "edit-calendar",
-        });
+        appendOrganizationChips(details, taskOrganizations(task), "day-task-card__organizations");
         details.append(createElement("p", "day-task-card__description", task.description ?? ""));
 
         const actions = createElement("div", "day-task-card__actions");
@@ -1015,10 +1017,7 @@
       const card = createElement("article", "notebook-card");
       card.dataset.taskId = task.id;
       card.append(createElement("h3", "notebook-card__title", `${taskHeading(task)}${task.edited ? " ★" : ""}`));
-      appendOrganizationChips(card, taskOrganizations(task), "notebook-card__organizations", {
-        taskId: task.id,
-        mode: "edit-notebook",
-      });
+      appendOrganizationChips(card, taskOrganizations(task), "notebook-card__organizations");
       card.append(createElement("p", "notebook-card__description", task.description ?? ""));
 
       const actions = createElement("div", "notebook-card__actions");
@@ -1252,6 +1251,32 @@
     nextState.tasks.splice(taskIndex, 1);
     pruneUnusedOrganizations(nextState);
     return saveState(nextState);
+  }
+
+  function renameOrganization(organizationId, rawName) {
+    const name = prepareOrganizationName(rawName);
+    if (!name || name.length > MAX_ORGANIZATION_NAME_LENGTH) {
+      throw validationError("organization-edit", "Название должно содержать от 1 до 100 символов.");
+    }
+
+    const nextState = cloneState(currentState);
+    const organization = nextState.organizations.find((item) => item.id === organizationId);
+    if (!organization) {
+      throw new Error("OrganizationNotFound");
+    }
+
+    const normalizedName = normalizeOrganizationName(name);
+    const duplicate = nextState.organizations.some(
+      (item) => item.id !== organizationId && item.normalizedName === normalizedName,
+    );
+    if (duplicate) {
+      throw validationError("organization-edit", "Организация с таким названием уже существует.");
+    }
+
+    organization.name = name;
+    organization.normalizedName = normalizedName;
+    organization.updatedAt = nowIso();
+    return saveState(nextState) ? cloneState(organization) : null;
   }
 
   function initialize() {
@@ -1624,6 +1649,52 @@
     closeModal(elements.notebookDialog);
   }
 
+  function setOrganizationEditError(message = "") {
+    setText(elements.organizationEditError, message);
+    elements.organizationEditError.hidden = !message;
+  }
+
+  function openOrganizationEditDialog(organizationId, origin) {
+    const organization = currentState.organizations.find((item) => item.id === organizationId);
+    if (!organization) {
+      return;
+    }
+    organizationEditId = organization.id;
+    organizationEditOrigin = origin ?? null;
+    elements.organizationEditNameInput.value = organization.name;
+    setOrganizationEditError();
+    showModal(elements.organizationEditDialog);
+    window.setTimeout(() => {
+      elements.organizationEditNameInput.focus();
+      elements.organizationEditNameInput.select();
+    }, 0);
+  }
+
+  function closeOrganizationEditDialog() {
+    closeModal(elements.organizationEditDialog);
+  }
+
+  function handleOrganizationEditSubmit(event) {
+    event.preventDefault();
+    if (!organizationEditId) {
+      return;
+    }
+    setOrganizationEditError();
+    try {
+      const result = renameOrganization(organizationEditId, elements.organizationEditNameInput.value);
+      if (result) {
+        showToast("Название организации изменено");
+        closeOrganizationEditDialog();
+      }
+    } catch (error) {
+      const message = error.name === "TaskValidationError"
+        ? error.message
+        : "Не удалось изменить организацию.";
+      setOrganizationEditError(message);
+      elements.organizationEditNameInput.focus();
+    }
+  }
+
   function openTransferDialog(taskId) {
     const task = currentState.tasks.find((item) => item.id === taskId && item.date !== null && !item.completed);
     if (!task) {
@@ -1777,6 +1848,25 @@
       origin.focus();
     }
   });
+  elements.closeOrganizationEditButton.addEventListener("click", closeOrganizationEditDialog);
+  elements.cancelOrganizationEditButton.addEventListener("click", closeOrganizationEditDialog);
+  elements.organizationEditForm.addEventListener("submit", handleOrganizationEditSubmit);
+  elements.organizationEditNameInput.addEventListener("input", () => setOrganizationEditError());
+  elements.organizationEditDialog.addEventListener("close", () => {
+    const origin = organizationEditOrigin;
+    const organizationId = organizationEditId;
+    organizationEditOrigin = null;
+    organizationEditId = null;
+    elements.organizationEditNameInput.value = "";
+    setOrganizationEditError();
+    if (origin && origin.isConnected && typeof origin.focus === "function") {
+      origin.focus();
+      return;
+    }
+    const replacement = [...document.querySelectorAll(".organization-chip--editable")]
+      .find((chip) => chip.dataset.organizationId === organizationId);
+    replacement?.focus();
+  });
   elements.closeTaskFormButton.addEventListener("click", requestCloseTaskForm);
   elements.cancelTaskFormButton.addEventListener("click", requestCloseTaskForm);
   elements.taskForm.addEventListener("submit", handleTaskFormSubmit);
@@ -1878,6 +1968,7 @@
       transferTask,
       runAutomaticCarry,
       deleteTask,
+      renameOrganization,
     }),
     render: renderCalendar,
   });

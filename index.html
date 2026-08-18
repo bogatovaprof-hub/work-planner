@@ -189,6 +189,30 @@
     </div>
   </dialog>
 
+  <dialog class="organization-edit-dialog" id="organizationEditDialog" aria-labelledby="organizationEditTitle">
+    <form class="organization-edit-form" id="organizationEditForm" novalidate>
+      <header class="task-form__header">
+        <div>
+          <p class="day-dialog__eyebrow">Организация</p>
+          <h2 id="organizationEditTitle">Изменить организацию</h2>
+        </div>
+        <button class="icon-button" id="closeOrganizationEditButton" type="button" aria-label="Закрыть">×</button>
+      </header>
+      <div class="organization-edit-form__body">
+        <div class="form-group">
+          <label for="organizationEditNameInput">Название организации</label>
+          <input id="organizationEditNameInput" type="text" maxlength="100" autocomplete="off">
+          <p class="form-help">Новое название появится во всех связанных задачах. Связь организации с задачами сохранится.</p>
+          <p class="form-error" id="organizationEditError" role="alert" hidden></p>
+        </div>
+      </div>
+      <footer class="task-form__footer">
+        <button class="button" id="cancelOrganizationEditButton" type="button">Отмена</button>
+        <button class="button button--primary" type="submit">Сохранить</button>
+      </footer>
+    </form>
+  </dialog>
+
   <dialog class="transfer-dialog" id="transferDialog" aria-labelledby="transferDialogTitle">
     <div class="dialog__content">
       <h2 id="transferDialogTitle">Перенести задачу</h2>
