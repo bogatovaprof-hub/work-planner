@@ -31,6 +31,11 @@
       </div>
 
       <div class="header-actions">
+        <button class="button button--secondary organizations-button" id="organizationsButton" type="button"
+                aria-label="Организации">
+          <span class="organizations-button__full">Организации</span>
+          <span class="organizations-button__short" aria-hidden="true">Орг.</span>
+        </button>
         <button class="button button--secondary" id="notebookButton" type="button">Блокнот</button>
         <button class="button button--primary" id="createTaskButton" type="button">Создать новую задачу</button>
       </div>
@@ -186,6 +191,23 @@
         <button class="icon-button" id="closeNotebookButton" type="button" aria-label="Закрыть">×</button>
       </header>
       <div class="notebook-list" id="notebookList"></div>
+    </div>
+  </dialog>
+
+  <dialog class="organization-dialog" id="organizationDialog" aria-labelledby="organizationDialogTitle">
+    <div class="organization-dialog__content">
+      <header class="notebook-dialog__header">
+        <div>
+          <p class="day-dialog__eyebrow">Список клиентов</p>
+          <h2 id="organizationDialogTitle">Организации</h2>
+        </div>
+        <button class="icon-button" id="closeOrganizationDialogButton" type="button" aria-label="Закрыть">×</button>
+      </header>
+      <p class="organization-dialog__help">
+        Переименование применяется ко всем задачам. Удалённая из выбора организация сохраняется в старых задачах.
+      </p>
+      <p class="form-error organization-dialog__error" id="organizationManagerError" role="alert" hidden></p>
+      <div class="organization-manager-list" id="organizationManagerList"></div>
     </div>
   </dialog>
 
