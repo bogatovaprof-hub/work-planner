@@ -14,6 +14,13 @@
       <div class="brand">
         <p class="brand__eyebrow">Планирование клиентских задач</p>
         <h1 class="brand__title">Рабочий планировщик</h1>
+        <div class="brand__view-toggle">
+          <button class="button button--view-toggle" id="displayTasksButton" type="button"
+                  aria-pressed="false">
+            <span class="button--view-toggle__icon" aria-hidden="true">▤</span>
+            <span id="displayTasksButtonLabel">Отобразить задачи</span>
+          </button>
+        </div>
       </div>
 
       <div class="month-navigation" aria-label="Навигация по календарю">
@@ -57,7 +64,24 @@
       <p class="toolbar__hint" id="calendarHint">Выберите день, чтобы посмотреть его задачи</p>
     </section>
 
-    <main class="app-main">
+    <main class="app-main" id="appMain">
+      <aside class="day-sidebar" id="daySidebar" aria-labelledby="daySidebarTitle" hidden>
+        <header class="day-sidebar__header">
+          <div>
+            <p class="day-dialog__eyebrow">Задачи на день</p>
+            <h2 id="daySidebarTitle">Выберите день</h2>
+          </div>
+        </header>
+        <div class="day-sidebar__actions">
+          <button class="button button--primary" id="createSidebarTaskButton" type="button" disabled>
+            Создать задачу
+          </button>
+        </div>
+        <div class="day-task-list day-sidebar__task-list" id="daySidebarTaskList">
+          <p class="day-task-empty">Выберите день в календаре</p>
+        </div>
+      </aside>
+
       <section class="calendar-panel" id="calendarPanel" aria-labelledby="monthTitle">
         <div class="weekday-row" aria-hidden="true">
           <span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span>

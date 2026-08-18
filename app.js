@@ -23,9 +23,16 @@
     previousMonthButton: document.getElementById("previousMonthButton"),
     nextMonthButton: document.getElementById("nextMonthButton"),
     todayButton: document.getElementById("todayButton"),
+    displayTasksButton: document.getElementById("displayTasksButton"),
+    displayTasksButtonLabel: document.getElementById("displayTasksButtonLabel"),
     createTaskButton: document.getElementById("createTaskButton"),
     notebookButton: document.getElementById("notebookButton"),
     calendarHint: document.getElementById("calendarHint"),
+    appMain: document.getElementById("appMain"),
+    daySidebar: document.getElementById("daySidebar"),
+    daySidebarTitle: document.getElementById("daySidebarTitle"),
+    createSidebarTaskButton: document.getElementById("createSidebarTaskButton"),
+    daySidebarTaskList: document.getElementById("daySidebarTaskList"),
     calendarPanel: document.getElementById("calendarPanel"),
     calendarGrid: document.getElementById("calendarGrid"),
     storageError: document.getElementById("storageError"),
@@ -87,6 +94,7 @@
   let displayedMonth = new Date(initialDate.getFullYear(), initialDate.getMonth(), 1);
   let selectedDateKey = null;
   let expandedTaskId = null;
+  let daySidebarVisible = false;
   let dayDialogOrigin = null;
   let notebookDialogOrigin = null;
   let taskFormContext = null;
@@ -619,6 +627,18 @@
     return element;
   }
 
+  function createTaskIconButton(label, symbol, additionalClass = "") {
+    const className = ["button", "button--quiet", "task-icon-button", additionalClass]
+      .filter(Boolean)
+      .join(" ");
+    const button = createElement("button", className, symbol);
+    button.type = "button";
+    button.setAttribute("aria-label", label);
+    button.title = label;
+    button.dataset.tooltip = label;
+    return button;
+  }
+
   function showModal(dialog) {
     if (typeof dialog.showModal === "function") {
       dialog.showModal();
@@ -678,21 +698,16 @@
     return [...elements.calendarGrid.children].find((child) => child.dataset?.date === dateKey) ?? null;
   }
 
-  function renderDayDialog() {
+  function renderDayTaskList(listElement) {
     if (!selectedDateKey) {
       return;
     }
 
-    setText(elements.dayDialogTitle, formatDayTitle(selectedDateKey));
-    elements.createDayTaskButton.disabled = !isDateInPlanningRange(selectedDateKey);
-    elements.createDayTaskButton.title = elements.createDayTaskButton.disabled
-      ? "Создание возможно с сегодняшнего дня до этой же даты следующего года"
-      : "";
-    elements.dayTaskList.replaceChildren();
+    listElement.replaceChildren();
     const tasks = getTasksForDate(selectedDateKey);
 
     if (tasks.length === 0) {
-      elements.dayTaskList.append(createElement("p", "day-task-empty", "На этот день задач нет"));
+      listElement.append(createElement("p", "day-task-empty", "На этот день задач нет"));
       return;
     }
 
@@ -706,6 +721,7 @@
       card.dataset.taskId = task.id;
       card.classList.toggle("day-task-card--completed", Boolean(task.completed));
       card.classList.toggle("day-task-card--auto-carried", Boolean(task.autoCarried));
+      card.classList.toggle("day-task-card--expanded", task.id === expandedTaskId);
 
       const summary = createElement("div", "day-task-card__summary");
       const summaryToggle = createElement("button", "day-task-card__summary-toggle");
@@ -728,7 +744,7 @@
       }
       summaryToggle.addEventListener("click", () => {
         expandedTaskId = expandedTaskId === task.id ? null : task.id;
-        renderDayDialog();
+        renderSelectedDayView();
       });
 
       const checkboxLabel = createElement("label", "day-task-card__summary-checkbox");
@@ -756,12 +772,8 @@
         const orderActions = createElement("span", "day-task-card__order-actions");
         const group = tasks.filter((item) => Boolean(item.completed) === Boolean(task.completed));
         const groupIndex = group.findIndex((item) => item.id === task.id);
-        const upButton = createElement("button", "button button--quiet", "↑");
-        const downButton = createElement("button", "button button--quiet", "↓");
-        upButton.type = "button";
-        downButton.type = "button";
-        upButton.setAttribute("aria-label", "Переместить задачу выше");
-        downButton.setAttribute("aria-label", "Переместить задачу ниже");
+        const upButton = createTaskIconButton("Переместить задачу выше", "↑", "task-icon-button--order");
+        const downButton = createTaskIconButton("Переместить задачу ниже", "↓", "task-icon-button--order");
         upButton.disabled = groupIndex <= 0;
         downButton.disabled = groupIndex < 0 || groupIndex >= group.length - 1;
         upButton.addEventListener("click", () => moveTaskWithinGroup(task.id, -1));
@@ -769,21 +781,16 @@
         orderActions.append(upButton, downButton);
         actions.append(orderActions);
 
-        const editButton = createElement("button", "button button--quiet", "Редактировать");
-        const copyButton = createElement("button", "button button--quiet", "Копировать");
-        const deleteButton = createElement("button", "button button--quiet", "Удалить");
-        [editButton, copyButton, deleteButton].forEach((button) => {
-          button.type = "button";
-        });
+        const editButton = createTaskIconButton("Редактировать", "✎");
+        const copyButton = createTaskIconButton("Копировать", "⧉");
+        const deleteButton = createTaskIconButton("Удалить", "×", "task-icon-button--danger");
         editButton.addEventListener("click", () => openTaskForm({ mode: "edit-calendar", taskId: task.id, origin: editButton }));
         copyButton.addEventListener("click", () => openTaskForm({ mode: "copy-calendar", taskId: task.id, origin: copyButton }));
         deleteButton.addEventListener("click", () => confirmDeleteTask(task.id));
 
         if (!task.completed) {
-          const transferButton = createElement("button", "button button--quiet", "Перенести");
-          const notebookAction = createElement("button", "button button--quiet", "В блокнот");
-          transferButton.type = "button";
-          notebookAction.type = "button";
+          const transferButton = createTaskIconButton("Перенести", "↪");
+          const notebookAction = createTaskIconButton("Перенести в блокнот", "▤");
           transferButton.addEventListener("click", () => openTransferDialog(task.id));
           notebookAction.addEventListener("click", () => confirmMoveToNotebook(task.id));
           actions.append(editButton, transferButton, notebookAction, copyButton, deleteButton);
@@ -795,7 +802,48 @@
       }
       fragment.append(card);
     });
-    elements.dayTaskList.append(fragment);
+    listElement.append(fragment);
+  }
+
+  function configureDayCreateButton(button) {
+    button.disabled = !selectedDateKey || !isDateInPlanningRange(selectedDateKey);
+    button.title = button.disabled
+      ? "Создание возможно с сегодняшнего дня до этой же даты следующего года"
+      : "";
+  }
+
+  function renderDayDialog() {
+    if (!selectedDateKey) {
+      return;
+    }
+    setText(elements.dayDialogTitle, formatDayTitle(selectedDateKey));
+    configureDayCreateButton(elements.createDayTaskButton);
+    renderDayTaskList(elements.dayTaskList);
+  }
+
+  function renderDaySidebar() {
+    if (!daySidebarVisible) {
+      return;
+    }
+    if (!selectedDateKey) {
+      setText(elements.daySidebarTitle, "Выберите день");
+      configureDayCreateButton(elements.createSidebarTaskButton);
+      elements.daySidebarTaskList.replaceChildren(
+        createElement("p", "day-task-empty", "Выберите день в календаре"),
+      );
+      return;
+    }
+    setText(elements.daySidebarTitle, formatDayTitle(selectedDateKey));
+    configureDayCreateButton(elements.createSidebarTaskButton);
+    renderDayTaskList(elements.daySidebarTaskList);
+  }
+
+  function renderSelectedDayView() {
+    if (daySidebarVisible) {
+      renderDaySidebar();
+    } else if (elements.dayDialog.open) {
+      renderDayDialog();
+    }
   }
 
   function returnFocusToDay() {
@@ -820,10 +868,43 @@
     expandedTaskId = null;
   }
 
+  function defaultSidebarDate() {
+    const today = localToday();
+    if (
+      displayedMonth.getFullYear() === today.getFullYear()
+      && displayedMonth.getMonth() === today.getMonth()
+    ) {
+      return toDateKey(today.getFullYear(), today.getMonth(), today.getDate());
+    }
+    return null;
+  }
+
+  function setDaySidebarVisibility(visible) {
+    daySidebarVisible = Boolean(visible);
+    elements.daySidebar.hidden = !daySidebarVisible;
+    elements.appMain.classList.toggle("app-main--with-day-panel", daySidebarVisible);
+    elements.displayTasksButton.setAttribute("aria-pressed", String(daySidebarVisible));
+    setText(elements.displayTasksButtonLabel, daySidebarVisible ? "Скрыть задачи" : "Отобразить задачи");
+
+    if (daySidebarVisible) {
+      closeDayDialog(false);
+      selectedDateKey = selectedDateKey ?? defaultSidebarDate();
+    } else {
+      expandedTaskId = null;
+    }
+    renderCalendar();
+    renderDaySidebar();
+  }
+
   function openDayDialog(dateKey, origin) {
     selectedDateKey = dateKey;
     expandedTaskId = null;
     dayDialogOrigin = origin;
+    if (daySidebarVisible) {
+      renderCalendar();
+      renderDaySidebar();
+      return;
+    }
     origin.classList.toggle("calendar-day--selected", true);
     renderDayDialog();
     showModal(elements.dayDialog);
@@ -851,7 +932,10 @@
       button.type = "button";
       button.dataset.date = cell.dateKey;
       button.classList.toggle("calendar-day--today", cell.dateKey === todayKey);
-      button.classList.toggle("calendar-day--selected", cell.dateKey === selectedDateKey && elements.dayDialog.open);
+      button.classList.toggle(
+        "calendar-day--selected",
+        cell.dateKey === selectedDateKey && (elements.dayDialog.open || daySidebarVisible),
+      );
       button.setAttribute(
         "aria-label",
         `${formatDayTitle(cell.dateKey)}. ${summary.count === 0 ? "Задач нет" : `Задач: ${summary.count}`}`,
@@ -879,7 +963,7 @@
     });
 
     elements.calendarGrid.append(fragment);
-    if (elements.dayDialog.open && selectedDateKey) {
+    if ((elements.dayDialog.open || daySidebarVisible) && selectedDateKey) {
       dayDialogOrigin = findRenderedDayButton(selectedDateKey);
     }
   }
@@ -922,6 +1006,8 @@
   function showReadyState() {
     elements.app.dataset.appState = "ready";
     elements.calendarPanel.hidden = false;
+    elements.daySidebar.hidden = !daySidebarVisible;
+    elements.appMain.classList.toggle("app-main--with-day-panel", daySidebarVisible);
     elements.storageError.hidden = true;
     elements.calendarHint.hidden = (currentState?.tasks.length ?? 0) > 0;
     setText(elements.storageStatus, "Локальные данные готовы");
@@ -929,6 +1015,7 @@
     if (elements.dayDialog.open) {
       renderDayDialog();
     }
+    renderDaySidebar();
     if (elements.notebookDialog.open) {
       renderNotebook();
     }
@@ -938,6 +1025,8 @@
     const isReadError = result.kind === "read";
     elements.app.dataset.appState = "error";
     elements.calendarPanel.hidden = true;
+    elements.daySidebar.hidden = true;
+    elements.appMain.classList.toggle("app-main--with-day-panel", false);
     elements.storageError.hidden = false;
     elements.clearStorageButton.hidden = !isReadError;
 
@@ -1167,14 +1256,18 @@
     selectedDateKey = null;
     displayedMonth = new Date(displayedMonth.getFullYear(), displayedMonth.getMonth() + offset, 1);
     renderCalendar();
+    renderDaySidebar();
   }
 
   function goToToday() {
     closeDayDialog(false);
-    selectedDateKey = null;
     const today = localToday();
+    selectedDateKey = daySidebarVisible
+      ? toDateKey(today.getFullYear(), today.getMonth(), today.getDate())
+      : null;
     displayedMonth = new Date(today.getFullYear(), today.getMonth(), 1);
     renderCalendar();
+    renderDaySidebar();
   }
 
   function setDisplayedMonth(year, monthIndex) {
@@ -1182,6 +1275,7 @@
     selectedDateKey = null;
     displayedMonth = new Date(year, monthIndex, 1);
     renderCalendar();
+    renderDaySidebar();
   }
 
   function renderOrganizationTags() {
@@ -1595,6 +1689,7 @@
   elements.previousMonthButton.addEventListener("click", () => changeMonth(-1));
   elements.nextMonthButton.addEventListener("click", () => changeMonth(1));
   elements.todayButton.addEventListener("click", goToToday);
+  elements.displayTasksButton.addEventListener("click", () => setDaySidebarVisibility(!daySidebarVisible));
   elements.createTaskButton.addEventListener("click", () => openTaskForm({ mode: "create", date: null, origin: elements.createTaskButton }));
   elements.notebookButton.addEventListener("click", () => openNotebook());
   elements.createDayTaskButton.addEventListener("click", () => {
@@ -1605,6 +1700,16 @@
     const date = selectedDateKey;
     closeDayDialog(false);
     openTaskForm({ mode: "create", date, origin });
+  });
+  elements.createSidebarTaskButton.addEventListener("click", () => {
+    if (!selectedDateKey || !isDateInPlanningRange(selectedDateKey)) {
+      return;
+    }
+    openTaskForm({
+      mode: "create",
+      date: selectedDateKey,
+      origin: elements.createSidebarTaskButton,
+    });
   });
   elements.closeDayDialogButton.addEventListener("click", () => closeDayDialog(true));
   elements.dayDialog.addEventListener("close", returnFocusToDay);
@@ -1700,6 +1805,7 @@
       return task ? taskHeading(task) : null;
     },
     getDisplayedMonth: () => new Date(displayedMonth.getTime()),
+    isDaySidebarVisible: () => daySidebarVisible,
     setDisplayedMonth,
     getState: () => currentState === null ? null : cloneState(currentState),
     saveState,

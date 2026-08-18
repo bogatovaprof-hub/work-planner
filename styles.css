@@ -122,6 +122,42 @@ select:disabled {
   line-height: 1;
 }
 
+.brand__view-toggle {
+  margin-top: 8px;
+}
+
+.button--view-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border-color: var(--line-strong);
+  background: rgba(255, 255, 255, 0.58);
+  color: var(--muted);
+}
+
+.button--view-toggle:not(:disabled):hover {
+  border-color: rgba(18, 107, 89, 0.45);
+  background: var(--green-soft);
+  color: var(--green-dark);
+}
+
+.button--view-toggle[aria-pressed="true"] {
+  border-color: rgba(18, 107, 89, 0.4);
+  background: var(--green-soft);
+  color: var(--green-dark);
+}
+
+.button--view-toggle[aria-pressed="true"]:not(:disabled):hover {
+  border-color: var(--green);
+  background: #d8e9e2;
+  color: var(--green-dark);
+}
+
+.button--view-toggle__icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
 .month-navigation {
   grid-area: navigation;
   display: flex;
@@ -282,8 +318,61 @@ select:disabled {
 
 .app-main {
   grid-row: 3;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
   height: 100%;
   min-height: 0;
+}
+
+.app-main--with-day-panel {
+  grid-template-columns: clamp(300px, 27vw, 400px) minmax(0, 1fr);
+}
+
+.day-sidebar {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.day-sidebar__header {
+  padding: 15px 16px 11px;
+  border-bottom: 1px solid var(--line);
+}
+
+.day-sidebar__header h2 {
+  margin: 0;
+  overflow: hidden;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.15rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.day-sidebar__actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 12px;
+  background: var(--surface-soft);
+}
+
+.day-sidebar__task-list {
+  min-height: 0;
+  padding: 10px 12px 14px;
+}
+
+.day-sidebar .day-task-card {
+  padding: 9px 10px;
+}
+
+.day-sidebar .day-task-card__actions {
+  justify-content: flex-start;
 }
 
 .calendar-panel {
@@ -550,6 +639,22 @@ select:disabled {
   background: var(--gold-soft);
 }
 
+.day-task-card:not(.day-task-card--expanded):not(.day-task-card--auto-carried) {
+  border-left-color: var(--line-strong);
+}
+
+.day-task-card--expanded {
+  border-color: rgba(18, 107, 89, 0.72);
+  border-left-color: var(--green);
+  background: #f1f7f4;
+  box-shadow: 0 8px 22px rgba(18, 75, 63, 0.14);
+  opacity: 1;
+}
+
+.day-task-card--expanded .day-task-card__summary-title {
+  color: var(--green-dark);
+}
+
 .day-task-card__summary {
   grid-column: 1 / -1;
   display: grid;
@@ -713,6 +818,66 @@ select:disabled {
   display: inline-flex;
   gap: 5px;
   margin-right: auto;
+}
+
+.task-icon-button {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  min-width: 34px;
+  min-height: 34px;
+  padding: 0;
+  border-color: transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.task-icon-button:not(:disabled):hover,
+.task-icon-button:focus-visible {
+  border-color: rgba(18, 107, 89, 0.28);
+  background: var(--green-soft);
+  color: var(--green-dark);
+}
+
+.task-icon-button--danger:not(:disabled):hover,
+.task-icon-button--danger:focus-visible {
+  border-color: rgba(153, 59, 59, 0.3);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.task-icon-button::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 7px);
+  z-index: 8;
+  width: max-content;
+  max-width: 190px;
+  padding: 5px 7px;
+  border-radius: 6px;
+  background: var(--ink);
+  color: #fff;
+  font-family: Arial, sans-serif;
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1.2;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 3px);
+  visibility: hidden;
+  white-space: nowrap;
+}
+
+.task-icon-button:hover::after,
+.task-icon-button:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  visibility: visible;
 }
 
 .task-form-dialog {
@@ -949,6 +1114,12 @@ select:disabled {
   min-height: 30px;
   padding: 4px 9px;
   font-size: 0.73rem;
+}
+
+.day-task-card__actions .task-icon-button {
+  min-height: 34px;
+  padding: 0;
+  font-size: 1rem;
 }
 
 .confirm-action-dialog {
