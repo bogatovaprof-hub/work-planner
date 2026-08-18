@@ -18,7 +18,6 @@
 
   const elements = {
     app: document.getElementById("app"),
-    storageStatus: document.getElementById("storageStatus"),
     monthTitle: document.getElementById("monthTitle"),
     previousMonthButton: document.getElementById("previousMonthButton"),
     nextMonthButton: document.getElementById("nextMonthButton"),
@@ -34,6 +33,7 @@
     resetFiltersButton: document.getElementById("resetFiltersButton"),
     appMain: document.getElementById("appMain"),
     daySidebar: document.getElementById("daySidebar"),
+    daySidebarEyebrow: document.getElementById("daySidebarEyebrow"),
     daySidebarTitle: document.getElementById("daySidebarTitle"),
     createSidebarTaskButton: document.getElementById("createSidebarTaskButton"),
     daySidebarTaskList: document.getElementById("daySidebarTaskList"),
@@ -396,10 +396,9 @@
       });
   }
 
-  function getFilteredTasksForDisplayedMonth() {
-    const monthPrefix = `${displayedMonth.getFullYear()}-${padNumber(displayedMonth.getMonth() + 1)}-`;
+  function getFilteredDatedTasks() {
     return (currentState?.tasks ?? [])
-      .filter((task) => task.date?.startsWith(monthPrefix) && taskMatchesFilters(task))
+      .filter((task) => task.date && taskMatchesFilters(task))
       .sort((firstTask, secondTask) => {
         const dateDifference = firstTask.date.localeCompare(secondTask.date);
         if (dateDifference !== 0) {
@@ -884,13 +883,13 @@
 
     listElement.replaceChildren();
     const tasks = filterOverview
-      ? getFilteredTasksForDisplayedMonth()
+      ? getFilteredDatedTasks()
       : getTasksForDate(selectedDateKey);
 
     if (tasks.length === 0) {
       renderListEmptyState(
         listElement,
-        filterOverview ? "В этом месяце подходящих задач нет" : "На этот день задач нет",
+        filterOverview ? "Подходящих задач с датой нет" : "На этот день задач нет",
         hasActiveFilters(),
       );
       return;
@@ -901,7 +900,25 @@
     }
 
     const fragment = document.createDocumentFragment();
+    let renderedMonthKey = "";
+    const displayedMonthKey = `${displayedMonth.getFullYear()}-${padNumber(displayedMonth.getMonth() + 1)}`;
     tasks.forEach((task) => {
+      if (filterOverview) {
+        const taskMonthKey = task.date.slice(0, 7);
+        if (taskMonthKey !== renderedMonthKey) {
+          const taskDate = parseDateKey(task.date);
+          const monthHeading = createElement(
+            "div",
+            "day-task-month-heading",
+            taskDate ? formatMonthTitle(taskDate) : taskMonthKey,
+          );
+          monthHeading.classList.toggle("day-task-month-heading--current", taskMonthKey === displayedMonthKey);
+          monthHeading.setAttribute("role", "heading");
+          monthHeading.setAttribute("aria-level", "3");
+          listElement.append(monthHeading);
+          renderedMonthKey = taskMonthKey;
+        }
+      }
       const card = createElement("article", "day-task-card");
       card.dataset.taskId = task.id;
       card.classList.toggle("day-task-card--completed", Boolean(task.completed));
@@ -1025,12 +1042,14 @@
       return;
     }
     if (hasActiveFilters()) {
-      setText(elements.daySidebarTitle, `Результаты · ${formatMonthTitle(displayedMonth)}`);
+      setText(elements.daySidebarEyebrow, "Задачи по фильтру");
+      setText(elements.daySidebarTitle, "Результаты по всем датам");
       elements.createSidebarTaskButton.disabled = true;
       elements.createSidebarTaskButton.title = "Сбросьте фильтры и выберите конкретный день для создания задачи";
       renderDayTaskList(elements.daySidebarTaskList, { filterOverview: true });
       return;
     }
+    setText(elements.daySidebarEyebrow, "Задачи на день");
     if (!selectedDateKey) {
       setText(elements.daySidebarTitle, "Выберите день");
       configureDayCreateButton(elements.createSidebarTaskButton);
@@ -1218,7 +1237,6 @@
     elements.daySidebar.hidden = !daySidebarVisible;
     elements.appMain.classList.toggle("app-main--with-day-panel", daySidebarVisible);
     elements.storageError.hidden = true;
-    setText(elements.storageStatus, "Локальные данные готовы");
     renderFilterControls();
     renderCalendar();
     if (elements.dayDialog.open) {
@@ -1242,11 +1260,9 @@
     elements.clearStorageButton.hidden = !isReadError;
 
     if (isReadError) {
-      setText(elements.storageStatus, "Ошибка чтения данных");
       setText(elements.storageErrorTitle, "Данные планировщика повреждены");
       setText(elements.storageErrorText, "Локальные данные не были изменены. Повторите чтение или подтвердите очистку.");
     } else {
-      setText(elements.storageStatus, "Ошибка сохранения данных");
       setText(elements.storageErrorTitle, "Не удалось сохранить данные");
       setText(elements.storageErrorText, "Локальные данные не были изменены. Повторите попытку после проверки настроек браузера.");
       showToast("Не удалось сохранить данные", "error");
@@ -1458,7 +1474,6 @@
 
   function initialize() {
     elements.app.dataset.appState = "loading";
-    setText(elements.storageStatus, "Проверка локальных данных…");
     const result = storage.read();
     if (!result.ok) {
       currentState = null;

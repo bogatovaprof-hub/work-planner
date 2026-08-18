@@ -35,10 +35,6 @@
         <button class="button button--primary" id="createTaskButton" type="button">Создать новую задачу</button>
       </div>
 
-      <div class="storage-status" aria-live="polite">
-        <span class="storage-status__dot" aria-hidden="true"></span>
-        <span id="storageStatus">Проверка локальных данных…</span>
-      </div>
     </header>
 
     <section class="toolbar" aria-label="Поиск и фильтры">
@@ -68,7 +64,7 @@
       <aside class="day-sidebar" id="daySidebar" aria-labelledby="daySidebarTitle" hidden>
         <header class="day-sidebar__header">
           <div>
-            <p class="day-dialog__eyebrow">Задачи на день</p>
+            <p class="day-dialog__eyebrow" id="daySidebarEyebrow">Задачи на день</p>
             <h2 id="daySidebarTitle">Выберите день</h2>
           </div>
         </header>
