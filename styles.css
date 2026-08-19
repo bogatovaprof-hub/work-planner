@@ -1443,3 +1443,289 @@ select:disabled {
     height: 20px;
   }
 }
+
+@media (hover: none), (pointer: coarse) {
+  .task-icon-button::after,
+  .organization-chip--editable::after {
+    display: none;
+  }
+
+  .button,
+  .icon-button,
+  .task-icon-button,
+  .organization-chip--editable {
+    touch-action: manipulation;
+  }
+}
+
+@media (max-width: 768px) {
+  html,
+  body {
+    height: auto;
+    min-height: 100%;
+    overflow-x: clip;
+    overflow-y: auto;
+  }
+
+  body {
+    min-width: 0;
+  }
+
+  .app-shell {
+    grid-template-rows: auto auto auto;
+    gap: 10px;
+    height: auto;
+    min-height: 100dvh;
+    padding:
+      max(10px, env(safe-area-inset-top))
+      max(10px, env(safe-area-inset-right))
+      max(14px, env(safe-area-inset-bottom))
+      max(10px, env(safe-area-inset-left));
+  }
+
+  .app-header {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "brand"
+      "navigation"
+      "actions";
+    gap: 10px;
+  }
+
+  .brand__eyebrow {
+    display: none;
+  }
+
+  .brand__title {
+    font-size: clamp(1.55rem, 8vw, 2rem);
+    text-align: center;
+  }
+
+  .brand__view-toggle {
+    margin-top: 10px;
+  }
+
+  .button--view-toggle {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .month-navigation {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+    gap: 7px;
+  }
+
+  .month-navigation__title {
+    width: auto;
+    font-size: 1.2rem;
+  }
+
+  #todayButton {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .header-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  .header-actions .button {
+    width: 100%;
+  }
+
+  .toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+    padding: 7px;
+  }
+
+  .field--search {
+    grid-column: 1 / -1;
+  }
+
+  #resetFiltersButton {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .toolbar__hint {
+    display: none;
+  }
+
+  .button,
+  .icon-button,
+  .field input,
+  .field select {
+    min-height: 44px;
+    height: auto;
+  }
+
+  .icon-button {
+    width: 44px;
+  }
+
+  .app-main,
+  .app-main--with-day-panel {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    height: auto;
+    min-height: 0;
+  }
+
+  .calendar-panel {
+    order: 1;
+    height: clamp(420px, 78vw, 620px);
+    min-height: 420px;
+  }
+
+  .day-sidebar {
+    order: 2;
+    grid-template-rows: auto auto auto;
+    max-height: none;
+    overflow: visible;
+    scroll-margin-top: 10px;
+  }
+
+  .day-sidebar__task-list {
+    overflow: visible;
+  }
+
+  .weekday-row span {
+    padding: 6px 2px;
+    font-size: 0.66rem;
+    letter-spacing: 0.03em;
+  }
+
+  .calendar-day {
+    gap: 2px;
+    padding: 4px 3px;
+  }
+
+  .calendar-day__top {
+    gap: 2px;
+  }
+
+  .calendar-day__number {
+    width: 24px;
+    height: 24px;
+    font-size: 0.72rem;
+  }
+
+  .calendar-day__count {
+    padding: 2px 5px;
+    font-size: 0.62rem;
+  }
+
+  .calendar-day__organization {
+    font-size: 0.66rem;
+  }
+
+  .day-dialog,
+  .task-form-dialog,
+  .notebook-dialog,
+  .organization-edit-dialog {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    margin: 0;
+    border-radius: 0;
+  }
+
+  .day-dialog__content,
+  .task-form,
+  .notebook-dialog__content,
+  .organization-edit-form {
+    min-height: 100dvh;
+    max-height: 100dvh;
+  }
+
+  .day-dialog__header,
+  .task-form__header,
+  .notebook-dialog__header {
+    padding: 14px 14px 10px;
+  }
+
+  .day-dialog__actions,
+  .task-form__footer {
+    padding: 10px 14px;
+  }
+
+  .day-task-list,
+  .task-form__body,
+  .notebook-list,
+  .organization-edit-form__body {
+    padding-inline: 14px;
+  }
+
+  .task-icon-button,
+  .day-task-card__summary-checkbox {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .organization-chip--editable {
+    min-height: 44px;
+  }
+
+  .confirm-action-dialog,
+  .transfer-dialog,
+  .unsaved-dialog,
+  .dialog__content {
+    max-width: calc(100vw - 20px);
+  }
+
+  .toast {
+    right: 10px;
+    bottom: max(10px, env(safe-area-inset-bottom));
+    max-width: calc(100vw - 20px);
+  }
+}
+
+@media (max-width: 480px) {
+  .header-actions,
+  .toolbar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .field--search,
+  #resetFiltersButton {
+    grid-column: auto;
+  }
+
+  .calendar-panel {
+    height: 420px;
+  }
+
+  .calendar-day__organization {
+    display: none;
+  }
+
+  .calendar-day__count {
+    padding-inline: 4px;
+  }
+
+  .organization-entry,
+  .date-entry {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .organization-entry .button,
+  .date-entry .button {
+    width: 100%;
+  }
+
+  .task-form__footer {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .task-form__footer .button {
+    width: 100%;
+    white-space: normal;
+  }
+}

@@ -853,9 +853,14 @@
         chip.dataset.tooltip = "Двойной щелчок — переименовать";
         chip.setAttribute(
           "aria-label",
-          `${organization.name}. Двойной щелчок или Enter — переименовать организацию`,
+          `${organization.name}. Переименовать организацию`,
         );
         const openEditor = () => openOrganizationEditDialog(organization.id, chip);
+        chip.addEventListener("click", () => {
+          if (usesTouchPrimaryInterface()) {
+            openEditor();
+          }
+        });
         chip.addEventListener("dblclick", openEditor);
         chip.addEventListener("keydown", (event) => {
           if (event.key === "Enter") {
@@ -1108,6 +1113,30 @@
     return null;
   }
 
+  function usesMobileLandingLayout() {
+    return typeof window.matchMedia === "function"
+      && window.matchMedia("(max-width: 768px)").matches;
+  }
+
+  function usesTouchPrimaryInterface() {
+    return typeof window.matchMedia === "function"
+      && window.matchMedia("(hover: none), (pointer: coarse)").matches;
+  }
+
+  function scrollDaySidebarIntoView() {
+    if (!daySidebarVisible || !usesMobileLandingLayout()) {
+      return;
+    }
+    const reducedMotion = typeof window.matchMedia === "function"
+      && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.requestAnimationFrame(() => {
+      elements.daySidebar.scrollIntoView({
+        behavior: reducedMotion ? "auto" : "smooth",
+        block: "start",
+      });
+    });
+  }
+
   function setDaySidebarVisibility(visible) {
     daySidebarVisible = Boolean(visible);
     elements.daySidebar.hidden = !daySidebarVisible;
@@ -1123,6 +1152,7 @@
     }
     renderCalendar();
     renderDaySidebar();
+    scrollDaySidebarIntoView();
   }
 
   function openDayDialog(dateKey, origin) {
@@ -1132,6 +1162,7 @@
     if (daySidebarVisible) {
       renderCalendar();
       renderDaySidebar();
+      scrollDaySidebarIntoView();
       return;
     }
     origin.classList.toggle("calendar-day--selected", true);
