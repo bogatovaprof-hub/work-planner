@@ -901,21 +901,25 @@
 
     const fragment = document.createDocumentFragment();
     let renderedMonthKey = "";
+    let renderedMonthGroup = null;
     const displayedMonthKey = `${displayedMonth.getFullYear()}-${padNumber(displayedMonth.getMonth() + 1)}`;
     tasks.forEach((task) => {
       if (filterOverview) {
         const taskMonthKey = task.date.slice(0, 7);
         if (taskMonthKey !== renderedMonthKey) {
           const taskDate = parseDateKey(task.date);
+          renderedMonthGroup = createElement("section", "day-task-month-group");
+          renderedMonthGroup.classList.toggle(
+            "day-task-month-group--current",
+            taskMonthKey === displayedMonthKey,
+          );
           const monthHeading = createElement(
-            "div",
+            "h3",
             "day-task-month-heading",
             taskDate ? formatMonthTitle(taskDate) : taskMonthKey,
           );
-          monthHeading.classList.toggle("day-task-month-heading--current", taskMonthKey === displayedMonthKey);
-          monthHeading.setAttribute("role", "heading");
-          monthHeading.setAttribute("aria-level", "3");
-          listElement.append(monthHeading);
+          renderedMonthGroup.append(monthHeading);
+          fragment.append(renderedMonthGroup);
           renderedMonthKey = taskMonthKey;
         }
       }
@@ -1016,7 +1020,7 @@
         details.append(actions);
         card.append(details);
       }
-      fragment.append(card);
+      (renderedMonthGroup ?? fragment).append(card);
     });
     listElement.append(fragment);
   }
